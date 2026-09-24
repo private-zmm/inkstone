@@ -26,6 +26,14 @@ describe('normalizePostgresSql', () => {
     )
   })
 
+  it('translates conflict syntax after a CTE', () => {
+    expect(normalizePostgresSql(
+      'WITH source AS (SELECT 1) INSERT OR IGNORE INTO folders (id) SELECT 1 WHERE EXISTS (SELECT 1 FROM source)',
+    )).toBe(
+      'WITH source AS (SELECT 1) INSERT INTO folders (id) SELECT 1 WHERE EXISTS (SELECT 1 FROM source) ON CONFLICT DO NOTHING',
+    )
+  })
+
   it('maps the AI queue replacement to a PostgreSQL upsert', () => {
     expect(normalizePostgresSql(
       'INSERT OR REPLACE INTO ai_index_queue (user_id, note_id, kind, created_at) VALUES (?1, ?2, ?3, ?4)',

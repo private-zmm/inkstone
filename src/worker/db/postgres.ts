@@ -177,15 +177,15 @@ export function normalizePostgresSql(source: string): string {
   sql = sql.replace(/\bMAX\(\s*(\$\d+)\s*,/gi, 'GREATEST($1::bigint,')
   sql = sql.replace(/\bMAX\(\s*([^(),]+?)\s*,\s*([^()]+?)\s*\)/gi, 'GREATEST($1, $2)')
 
-  const replaceMatch = /^INSERT\s+OR\s+REPLACE\s+INTO\s+ai_index_queue\b/i.test(sql)
-  const ignoreMatch = /^INSERT\s+OR\s+IGNORE\s+INTO\b/i.test(sql)
+  const replaceMatch = /\bINSERT\s+OR\s+REPLACE\s+INTO\s+ai_index_queue\b/i.test(sql)
+  const ignoreMatch = /\bINSERT\s+OR\s+IGNORE\s+INTO\b/i.test(sql)
   if (replaceMatch) {
-    sql = sql.replace(/^INSERT\s+OR\s+REPLACE\s+INTO\s+/i, 'INSERT INTO ')
+    sql = sql.replace(/\bINSERT\s+OR\s+REPLACE\s+INTO\s+/i, 'INSERT INTO ')
     if (!/\bON\s+CONFLICT\b/i.test(sql)) {
       sql += ' ON CONFLICT (user_id, note_id) DO UPDATE SET kind = EXCLUDED.kind, created_at = EXCLUDED.created_at'
     }
   } else if (ignoreMatch) {
-    sql = sql.replace(/^INSERT\s+OR\s+IGNORE\s+INTO\s+/i, 'INSERT INTO ')
+    sql = sql.replace(/\bINSERT\s+OR\s+IGNORE\s+INTO\s+/i, 'INSERT INTO ')
     if (!/\bON\s+CONFLICT\b/i.test(sql)) {
       sql += ' ON CONFLICT DO NOTHING'
     }
