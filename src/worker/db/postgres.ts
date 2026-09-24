@@ -169,6 +169,13 @@ export function normalizePostgresSql(source: string): string {
   // SQLite exposes an implicit rowid on ordinary tables. PostgreSQL's ctid
   // provides the same short-lived row locator for bounded cleanup queries.
   sql = sql.replace(/\browid\b/gi, 'ctid')
+  // PostgreSQL cannot infer the type of a parameter used only in an IS NULL
+  // predicate (for example an optional folder id). These nullable values are
+  // string identifiers throughout the application.
+  sql = sql.replace(
+    /(\$\d+)\s+IS\s+(NOT\s+)?NULL\b/gi,
+    (_match, parameter: string, not: string | undefined) => `${parameter}::text IS ${not ? 'NOT ' : ''}NULL`,
+  )
   sql = sql.replace(/\bIS\s+NOT\s+\$(\d+)/gi, (_match, index: string) => `IS DISTINCT FROM $${index}`)
   sql = sql.replace(/\bIS\s+\$(\d+)/gi, (_match, index: string) => `IS NOT DISTINCT FROM $${index}`)
   sql = sql.replace(/\bIS\s+NOT\s+((?!(?:DISTINCT|NULL|TRUE|FALSE|NOT)\b)(?:[A-Za-z_][\w]*\.)?[A-Za-z_][\w]*)/gi, 'IS DISTINCT FROM $1')

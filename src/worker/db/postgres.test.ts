@@ -42,6 +42,14 @@ describe('normalizePostgresSql', () => {
     )
   })
 
+  it('casts nullable string parameters so PostgreSQL can infer their type', () => {
+    expect(normalizePostgresSql(
+      'UPDATE folders SET name = ?4 WHERE (?8 IS NULL OR id = ?8)',
+    )).toBe(
+      'UPDATE folders SET name = $4 WHERE ($8::text IS NULL OR id = $8)',
+    )
+  })
+
   it('maps the AI queue replacement to a PostgreSQL upsert', () => {
     expect(normalizePostgresSql(
       'INSERT OR REPLACE INTO ai_index_queue (user_id, note_id, kind, created_at) VALUES (?1, ?2, ?3, ?4)',
