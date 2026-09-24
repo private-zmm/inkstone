@@ -50,6 +50,14 @@ describe('normalizePostgresSql', () => {
     )
   })
 
+  it('keeps JSON numeric folder positions numeric in PostgreSQL', () => {
+    expect(normalizePostgresSql(
+      "SELECT COALESCE((SELECT CAST(json_extract(item.value, '$.position') AS REAL) FROM json_each(?6) item), position)",
+    )).toBe(
+      "SELECT COALESCE((SELECT CAST((item.value ->> 'position') AS REAL) FROM jsonb_array_elements($6::jsonb) item), position)",
+    )
+  })
+
   it('casts nullable string parameters so PostgreSQL can infer their type', () => {
     expect(normalizePostgresSql(
       'UPDATE folders SET name = ?4 WHERE (?8 IS NULL OR id = ?8)',

@@ -328,7 +328,7 @@ foldersRoutes.delete('/:id', async (c) => {
         `UPDATE folders SET
            parent_id = CASE WHEN parent_id = ?1 THEN ?4 ELSE parent_id END,
            position = COALESCE((
-             SELECT json_extract(item.value, '$.position') FROM json_each(?6) item
+             SELECT CAST(json_extract(item.value, '$.position') AS REAL) FROM json_each(?6) item
               WHERE json_extract(item.value, '$.id') = folders.id
            ), position),
            updated_at = MAX(updated_at + 1, ?5)
