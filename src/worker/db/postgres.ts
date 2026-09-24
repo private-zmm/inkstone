@@ -181,6 +181,7 @@ export function normalizePostgresSql(source: string): string {
   sql = sql.replace(/CAST\(\s*([^()]+?)\s+AS\s+BLOB\s*\)/gi, "convert_to($1, 'UTF8')")
   sql = sql.replace(/\bMAX\(\s*(\$\d+)\s*,/gi, 'GREATEST($1::bigint,')
   sql = sql.replace(/\bMAX\(\s*([^(),]+?)\s*,\s*([^()]+?)\s*\)/gi, 'GREATEST($1, $2)')
+  sql = sql.replace(/\bUPDATE\s+OR\s+IGNORE\s+/gi, 'UPDATE ')
 
   const replaceMatch = /\bINSERT\s+OR\s+REPLACE\s+INTO\s+ai_index_queue\b/i.test(sql)
   const ignoreMatch = /\bINSERT\s+OR\s+IGNORE\s+INTO\b/i.test(sql)

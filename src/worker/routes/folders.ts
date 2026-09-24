@@ -19,6 +19,15 @@ foldersRoutes.use('*', requireAuth)
 
 const FOLDER_SELECT = `f.id, f.parent_id, f.name, f.icon, f.color, f.position, f.created_at, f.updated_at`
 
+function isUniqueConstraintViolation(error: unknown): boolean {
+  return Boolean(
+    error &&
+    typeof error === 'object' &&
+    'code' in error &&
+    (error as { code?: unknown }).code === '23505',
+  )
+}
+
 foldersRoutes.get('/', async (c) => {
   const { results } = await c.env.DB.prepare(
     `SELECT ${FOLDER_SELECT} FROM folders f
@@ -249,7 +258,15 @@ foldersRoutes.patch('/:id', async (c) => {
      SELECT ?1, 'folder', ?2, 'upsert', ?3
       WHERE EXISTS (SELECT 1 FROM folders WHERE id = ?2 AND user_id = ?1 AND updated_at = ?3)`,
   ).bind(userId, id, updatedAt)
-  const [updated] = await c.env.DB.batch([update, change])
+  let updated: Awaited<ReturnType<typeof c.env.DB.batch>>[number] | undefined
+  try {
+    ;[updated] = await c.env.DB.batch([update, change])
+  } catch (error) {
+    if (isUniqueConstraintViolation(error)) {
+      throw ApiError.conflict('The folder changed elsewhere or a sibling already uses this name')
+    }
+    throw error
+  }
   if (!updated?.meta.changes) throw ApiError.conflict('The folder changed elsewhere or a sibling already uses this name')
   await broadcastCursor(c)
   return c.json(await loadFolder(c.env.DB, userId, id))

@@ -34,6 +34,14 @@ describe('normalizePostgresSql', () => {
     )
   })
 
+  it('translates a guarded folder update after a CTE', () => {
+    expect(normalizePostgresSql(
+      'WITH ancestors AS (SELECT 1) UPDATE OR IGNORE folders SET name = ?4 WHERE id = ?1',
+    )).toBe(
+      'WITH ancestors AS (SELECT 1) UPDATE folders SET name = $4 WHERE id = $1',
+    )
+  })
+
   it('maps the AI queue replacement to a PostgreSQL upsert', () => {
     expect(normalizePostgresSql(
       'INSERT OR REPLACE INTO ai_index_queue (user_id, note_id, kind, created_at) VALUES (?1, ?2, ?3, ?4)',
