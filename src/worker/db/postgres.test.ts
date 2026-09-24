@@ -42,6 +42,14 @@ describe('normalizePostgresSql', () => {
     )
   })
 
+  it('translates SQLite null-safe comparisons against subqueries', () => {
+    expect(normalizePostgresSql(
+      'SELECT 1 FROM folders sibling WHERE sibling.parent_id IS (SELECT parent_id FROM folders WHERE id = ?1)',
+    )).toBe(
+      'SELECT 1 FROM folders sibling WHERE sibling.parent_id IS NOT DISTINCT FROM (SELECT parent_id FROM folders WHERE id = $1)',
+    )
+  })
+
   it('casts nullable string parameters so PostgreSQL can infer their type', () => {
     expect(normalizePostgresSql(
       'UPDATE folders SET name = ?4 WHERE (?8 IS NULL OR id = ?8)',
