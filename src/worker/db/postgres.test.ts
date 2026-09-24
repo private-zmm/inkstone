@@ -32,6 +32,22 @@ describe('normalizePostgresSql', () => {
     )).toContain('ON CONFLICT (user_id, note_id) DO UPDATE SET')
   })
 
+  it('translates note tag aggregation for sync snapshots', () => {
+    expect(normalizePostgresSql(
+      'SELECT GROUP_CONCAT(t.name, char(1)) AS tag_names FROM note_tags nt',
+    )).toBe(
+      'SELECT STRING_AGG(t.name, chr(1)) AS tag_names FROM note_tags nt',
+    )
+  })
+
+  it('casts millisecond timestamps in nested SQLite MAX calls', () => {
+    expect(normalizePostgresSql(
+      'SELECT MAX(?3, COALESCE((SELECT created_at + 1 FROM ai_index_queue), ?3))',
+    )).toBe(
+      'SELECT GREATEST($3::bigint, COALESCE((SELECT created_at + 1 FROM ai_index_queue), $3))',
+    )
+  })
+
   it('keeps SQLite case-insensitive comparisons and bounded row cleanup', () => {
     expect(normalizePostgresSql(
       'DELETE FROM mcp_operations WHERE rowid IN (SELECT rowid FROM mcp_operations WHERE created_at < ?1 ORDER BY created_at, rowid LIMIT ?2)',

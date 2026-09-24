@@ -159,6 +159,7 @@ export function normalizePostgresSql(source: string): string {
   )
   sql = sql.replace(/\bCOLLATE\s+NOCASE\b/gi, '')
   sql = sql.replace(/\bIFNULL\s*\(/gi, 'COALESCE(')
+  sql = sql.replace(/\bGROUP_CONCAT\(\s*([A-Za-z_][\w.]*)\s*,\s*char\(1\)\s*\)/gi, 'STRING_AGG($1, chr(1))')
   sql = sql.replace(/\bLIKE\b/gi, 'ILIKE')
   // SQLite exposes an implicit rowid on ordinary tables. PostgreSQL's ctid
   // provides the same short-lived row locator for bounded cleanup queries.
@@ -173,6 +174,7 @@ export function normalizePostgresSql(source: string): string {
     '($1 ->> \'$2\')',
   )
   sql = sql.replace(/CAST\(\s*([^()]+?)\s+AS\s+BLOB\s*\)/gi, "convert_to($1, 'UTF8')")
+  sql = sql.replace(/\bMAX\(\s*(\$\d+)\s*,/gi, 'GREATEST($1::bigint,')
   sql = sql.replace(/\bMAX\(\s*([^(),]+?)\s*,\s*([^()]+?)\s*\)/gi, 'GREATEST($1, $2)')
 
   const replaceMatch = /^INSERT\s+OR\s+REPLACE\s+INTO\s+ai_index_queue\b/i.test(sql)
