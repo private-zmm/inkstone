@@ -5,6 +5,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "moduleDetection": "force",
+    "baseUrl": ".",
     "types": ["node"],
     "strict": true,
     "noUnusedLocals": true,
