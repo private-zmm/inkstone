@@ -1,4 +1,7 @@
-import { Pool, type PoolClient, type QueryResultRow } from 'pg'
+import { Pool, types, type PoolClient, type QueryResultRow } from 'pg'
+
+// JavaScript timestamps fit safely in Number, while node-postgres returns BIGINT as strings.
+types.setTypeParser(20, (value) => Number.parseInt(value, 10))
 
 export { isPostgresDatabase } from './runtime-kind'
 

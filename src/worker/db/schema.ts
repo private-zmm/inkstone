@@ -671,6 +671,7 @@ function initializePostgresDatabase(db: Database): Promise<DatabaseState> {
     for (const statement of statements) {
       await db.prepare(statement).run()
     }
+    await normalizePostgresTimestampColumns(db)
     await db.prepare(
       `CREATE TABLE IF NOT EXISTS schema_migrations (
          version INTEGER PRIMARY KEY,
@@ -723,10 +724,50 @@ function toPostgresSchemaStatement(statement: string): string {
   return statement
     .replace(/INTEGER\s+PRIMARY\s+KEY\s+AUTOINCREMENT/gi, 'BIGSERIAL PRIMARY KEY')
     .replace(/\bBLOB\b/gi, 'BYTEA')
+    .replace(/\b(at|[A-Za-z_]+_(?:at|until))\s+INTEGER\b/gi, '$1 BIGINT')
     .replace(/([A-Za-z_][\w.]*)\s+COLLATE\s+NOCASE\b/gi, 'LOWER($1)')
     .replace(/\bCOLLATE\s+NOCASE\b/gi, '')
     .replace(/\bIFNULL\s*\(/gi, 'COALESCE(')
     .replace(/CHECK\s*\(\s*object_key\s+GLOB\s+'minio:\?\*'\s*\)/i, "CHECK (object_key <> '')")
+}
+
+const POSTGRES_TIMESTAMP_COLUMNS: Record<string, readonly string[]> = {
+  app_meta: [],
+  schema_migrations: ['applied_at'],
+  users: ['created_at', 'last_seen_at'],
+  folders: ['created_at', 'updated_at', 'deleted_at'],
+  notes: ['created_at', 'updated_at', 'deleted_at'],
+  tags: ['created_at'],
+  note_versions: ['created_at'],
+  attachments: ['created_at'],
+  attachment_cleanup: ['created_at'],
+  import_mappings: ['updated_at'],
+  backup_targets: ['last_run_at', 'created_at', 'updated_at'],
+  backup_runs: ['started_at', 'finished_at'],
+  shares: ['expires_at', 'created_at'],
+  share_asset_sessions: ['expires_at', 'created_at'],
+  changes: ['at'],
+  sessions: ['expires_at', 'created_at'],
+  login_attempts: ['last_fail_at', 'locked_until'],
+  totp_credentials: ['enabled_at', 'pending_expires_at', 'created_at', 'updated_at'],
+  totp_recovery_codes: ['created_at', 'used_at'],
+  totp_login_challenges: ['expires_at', 'created_at'],
+  mcp_preferences: ['updated_at'],
+  mcp_operations: ['created_at'],
+  mcp_api_keys: ['created_at', 'last_used_at', 'revoked_at'],
+  ai_note_embeddings: ['indexed_at'],
+  ai_index_queue: ['created_at'],
+  fts_index_queue: ['created_at'],
+}
+
+async function normalizePostgresTimestampColumns(db: Database): Promise<void> {
+  for (const [table, columns] of Object.entries(POSTGRES_TIMESTAMP_COLUMNS)) {
+    for (const column of columns) {
+      await db.prepare(
+        `ALTER TABLE ${table} ALTER COLUMN ${column} TYPE BIGINT USING ${column}::bigint`,
+      ).run()
+    }
+  }
 }
 
 async function createSchema(db: Database): Promise<DatabaseState> {
