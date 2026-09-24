@@ -758,7 +758,11 @@ async function importBundle(
   try {
     for (const note of bundle.notes) {
       if (typeof note?.content !== 'string') continue
-      const content = rewriteAttachmentReferences(note.content, importedAttachments.idMap)
+      const rawContent = rewriteAttachmentReferences(note.content, importedAttachments.idMap)
+      const content = sanitizeImportedText(rawContent)
+      if (content !== rawContent) {
+        addWarning(ctx.result, `${typeof note.title === 'string' ? note.title : 'Untitled note'}: removed NUL bytes that PostgreSQL cannot store`)
+      }
       try {
         assertContentSize(content)
       } catch (err) {
@@ -1246,6 +1250,11 @@ async function importMarkdown(
   text: string,
   ctx: ImportContext,
 ): Promise<void> {
+  const sanitizedText = sanitizeImportedText(text)
+  if (sanitizedText !== text) {
+    addWarning(ctx.result, `${path}: removed NUL bytes that PostgreSQL cannot store`)
+    text = sanitizedText
+  }
   assertContentSize(text)
 
   const { meta } = splitFrontMatter(text)
@@ -1302,6 +1311,10 @@ async function importMarkdown(
     ctx,
   )
   ctx.result.createdNotes++
+}
+
+export function sanitizeImportedText(text: string): string {
+  return text.includes('\u0000') ? text.replace(/\u0000/g, '') : text
 }
 
 interface InsertInput {
