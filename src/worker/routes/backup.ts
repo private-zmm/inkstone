@@ -255,7 +255,7 @@ async function enforceOutboundBudget(
   }
 }
 
-async function loadTarget(db: D1Database, userId: string, id: string): Promise<TargetRow> {
+async function loadTarget(db: Database, userId: string, id: string): Promise<TargetRow> {
   const row = await db
     .prepare(`SELECT * FROM backup_targets WHERE id = ?1 AND user_id = ?2`)
     .bind(id, userId)

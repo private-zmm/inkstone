@@ -275,7 +275,7 @@ tagsRoutes.delete('/:id', async (c) => {
 })
 
 async function loadTag(
-  db: D1Database,
+  db: Database,
   userId: string,
   id: string,
 ): Promise<ReturnType<typeof toTag> | null> {
@@ -382,7 +382,7 @@ export async function rewriteTagInNotes(
            AND id IN (
              SELECT id FROM note_versions WHERE note_id = ?1 ORDER BY created_at DESC, id DESC LIMIT -1 OFFSET ?8)`,
       ).bind(note.id, ...mutationValues, LIMITS.versionsPerNote)
-      const statements: D1PreparedStatement[] = [update, snapshot, trim]
+      const statements: PreparedStatement[] = [update, snapshot, trim]
       if (note.deleted_at === null) {
         statements.push(...buildNoteDerivedStatements({
           db: env.DB,
@@ -472,7 +472,7 @@ async function rollbackTagRewrites(
       nextRev,
       updatedAt,
     )
-    const statements: D1PreparedStatement[] = [update]
+    const statements: PreparedStatement[] = [update]
     if (note.deleted_at === null) {
       statements.push(...buildNoteDerivedStatements({
         db: env.DB,

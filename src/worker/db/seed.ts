@@ -25,7 +25,7 @@ export async function seedWorkspace(
       return { id, content, title, excerpt, words, chars, hash, createdAt, position: 1000 - index }
     }),
   )
-  const statements: D1PreparedStatement[] = []
+  const statements: PreparedStatement[] = []
   for (const note of notes) {
     statements.push(
       env.DB.prepare(

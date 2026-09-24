@@ -57,7 +57,7 @@ export async function duplicateMcpNote(
 }
 
 export async function listMcpNoteVersions(
-  db: D1Database,
+  db: Database,
   userId: string,
   noteId: string,
   limit = 20,
@@ -85,7 +85,7 @@ export async function listMcpNoteVersions(
 }
 
 export async function readMcpNoteVersion(
-  db: D1Database,
+  db: Database,
   userId: string,
   noteId: string,
   versionId: string,
@@ -132,7 +132,7 @@ export async function restoreMcpNoteVersion(
   })
 }
 
-export async function getMcpNoteProperties(db: D1Database, userId: string, noteId: string) {
+export async function getMcpNoteProperties(db: Database, userId: string, noteId: string) {
   const row = await db.prepare(
     `SELECT title, content, rev FROM notes WHERE id = ?1 AND user_id = ?2 AND deleted_at IS NULL`,
   ).bind(noteId, userId).first<{ title: string; content: string; rev: number }>()
@@ -180,7 +180,7 @@ export async function updateMcpNoteProperties(
 }
 
 export async function queryMcpNoteProperties(
-  db: D1Database,
+  db: Database,
   userId: string,
   input: {
     conditions: Array<{ key: string; operator: 'exists' | 'equals' | 'contains'; value?: unknown }>
@@ -422,7 +422,7 @@ export async function deleteMcpTag(
 }
 
 export async function previewMcpTagChange(
-  db: D1Database,
+  db: Database,
   userId: string,
   tagId: string,
   nextName?: string | null,
@@ -597,7 +597,7 @@ export async function removeMcpFolderAndPromote(
 }
 
 export async function previewMcpFolderRemoval(
-  db: D1Database,
+  db: Database,
   userId: string,
   folderId: string,
 ) {
@@ -663,7 +663,7 @@ export async function bulkOrganizeMcpNotes(
 }
 
 export async function exploreMcpGraph(
-  db: D1Database,
+  db: Database,
   userId: string,
   origin: string,
   rootId: string,
@@ -712,7 +712,7 @@ export async function exploreMcpGraph(
   }
 }
 
-export async function listMcpBackupRuns(db: D1Database, userId: string, limit = 10) {
+export async function listMcpBackupRuns(db: Database, userId: string, limit = 10) {
   const { results } = await db.prepare(
     `SELECT id, trigger, status, started_at, finished_at, note_count, file_count, bytes, detail
        FROM backup_runs WHERE user_id = ?1 ORDER BY started_at DESC LIMIT ?2`,
@@ -743,7 +743,7 @@ export async function listMcpBackupRuns(db: D1Database, userId: string, limit = 
 }
 
 export async function listMcpAttachments(
-  db: D1Database,
+  db: Database,
   userId: string,
   input: { noteId?: string; limit?: number; cursor?: number },
 ) {
@@ -967,7 +967,7 @@ export function runMcpBackup(
   })
 }
 
-export async function getMcpShare(db: D1Database, userId: string, origin: string, noteId: string) {
+export async function getMcpShare(db: Database, userId: string, origin: string, noteId: string) {
   await requireOwnedNote(db, userId, noteId)
   const row = await loadShare(db, userId, noteId)
   return { share: row ? shareResult(row, origin) : null }
@@ -1054,20 +1054,20 @@ function duplicateTitle(title: string): string {
   return `${base.slice(0, Math.max(0, LIMITS.titleMaxLength - suffix.length))}${suffix}`
 }
 
-async function requireOwnedNote(db: D1Database, userId: string, noteId: string): Promise<void> {
+async function requireOwnedNote(db: Database, userId: string, noteId: string): Promise<void> {
   const row = await db.prepare(`SELECT 1 FROM notes WHERE id = ?1 AND user_id = ?2`)
     .bind(noteId, userId).first()
   if (!row) throw ApiError.notFound('Note not found')
 }
 
-async function loadFolderOrNull(db: D1Database, userId: string, id: string): Promise<FolderRow | null> {
+async function loadFolderOrNull(db: Database, userId: string, id: string): Promise<FolderRow | null> {
   return db.prepare(
     `SELECT id, parent_id, name, icon, color, position, created_at, updated_at
        FROM folders WHERE id = ?1 AND user_id = ?2 AND deleted_at IS NULL`,
   ).bind(id, userId).first<FolderRow>()
 }
 
-async function loadTagOrNull(db: D1Database, userId: string, id: string) {
+async function loadTagOrNull(db: Database, userId: string, id: string) {
   const row = await db.prepare(
     `SELECT t.id, t.name, t.color, t.is_manual,
        (SELECT COUNT(*) FROM note_tags nt JOIN notes n ON n.id = nt.note_id
@@ -1089,7 +1089,7 @@ async function loadTagOrNull(db: D1Database, userId: string, id: string) {
   } : null
 }
 
-async function loadAttachmentMeta(db: D1Database, userId: string, id: string) {
+async function loadAttachmentMeta(db: Database, userId: string, id: string) {
   return db.prepare(
     `SELECT id, note_id, filename, mime, size, sha256, width, height, created_at
        FROM attachments WHERE id = ?1 AND user_id = ?2`,
@@ -1115,7 +1115,7 @@ interface ShareRow {
   created_at: number
 }
 
-function loadShare(db: D1Database, userId: string, noteId: string) {
+function loadShare(db: Database, userId: string, noteId: string) {
   return db.prepare(
     `SELECT slug, note_id, password_hash, expires_at, views, created_at
        FROM shares WHERE note_id = ?1 AND user_id = ?2`,
@@ -1134,7 +1134,7 @@ function shareResult(row: ShareRow, origin: string) {
   }
 }
 
-async function loadTagByName(db: D1Database, userId: string, name: string, exceptId?: string) {
+async function loadTagByName(db: Database, userId: string, name: string, exceptId?: string) {
   const row = await db.prepare(
     `SELECT id FROM tags WHERE user_id = ?1 AND name = ?2 COLLATE NOCASE
       AND (?3 IS NULL OR id != ?3) ORDER BY created_at ASC, id ASC LIMIT 1`,
@@ -1143,7 +1143,7 @@ async function loadTagByName(db: D1Database, userId: string, name: string, excep
 }
 
 async function validateFolderParent(
-  db: D1Database,
+  db: Database,
   userId: string,
   parentId: string | null,
   selfId?: string,
@@ -1169,7 +1169,7 @@ async function validateFolderParent(
 }
 
 async function validateFolderMoveDepth(
-  db: D1Database,
+  db: Database,
   userId: string,
   folderId: string,
   parentId: string | null,

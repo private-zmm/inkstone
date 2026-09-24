@@ -6,7 +6,7 @@ export const ZH_CN_MESSAGES = {
     "mobile.back_to_account": "返回我的",
     "app.boot_label": "正在准备笔记本…",
     "app.document_title": "Inkstone",
-    "app.meta_description": "运行在 Cloudflare 上的私有、自托管 Markdown 笔记本。",
+    "app.meta_description": "面向家庭 NAS 的私有、自托管 Markdown 笔记本。",
     "api.error.bad_request": "请求内容有误",
     "api.error.conflict": "内容已在别处修改，请刷新后重试",
     "api.error.forbidden": "没有权限执行此操作",
@@ -95,7 +95,7 @@ export const ZH_CN_MESSAGES = {
     "auth.recovery_code": "恢复码",
     "auth.recovery_code_used": "已使用恢复码登录",
     "auth.recovery_codes_remaining": "还剩 {count} 枚未使用的恢复码；如有需要，请到设置中重新生成。",
-    "auth.self_hosted_on_cloudflare_workers_your_data_is_yours": "私有笔记 · 数据由你掌控",
+    "auth.self_hosted_local_your_data_is_yours": "私有笔记 · 数据由你掌控",
     "auth.sign_in": "登录",
     "auth.sign_up": "注册",
     "auth.this_is_a_private_instance_registration_is_closed_so_only_existing_accou": "这是一个私有实例，注册已关闭，只有现有账号可以登录",
@@ -602,7 +602,7 @@ export const ZH_CN_MESSAGES = {
     "settings.files_that_have_been_backed_up_there_will_not_be_deleted": "已经备份到那边的文件不会被删除。",
     "settings.finally_click_manage_key_permissions_and_turn_on_admin_access_otherwise": "最后点击 Manage Key Permissions，把 Admin Access 打开，否则无法写入。",
     "settings.focus_mode": "专注模式",
-    "settings.for_example_primary_r2_backup": "例如：R2 主备份",
+    "settings.for_example_primary_backup": "例如：主备份",
     "settings.free_10_gb": "免费 10 GB",
     "settings.free_5_gb": "免费 5 GB",
     "settings.freed_value0": "释放了 {value0}",
@@ -633,7 +633,7 @@ export const ZH_CN_MESSAGES = {
     "settings.last_backup_succeeded": "上次备份成功",
     "settings.last_saved_value0": "最近一次写入 {value0}",
     "settings.latest_backups": "最近的备份",
-    "settings.leave_blank_unless_the_provider_requires_it_for_r2_use_url": "服务商没有要求时可留空；R2 填 https://<账号ID>.r2.cloudflarestorage.com",
+    "settings.leave_blank_unless_the_provider_requires_it_for_endpoint": "服务商没有要求时可留空；MinIO 填 http://minio:9000",
     "settings.leave_the_key_blank_to_leave_it_unchanged": "密钥留空表示保持不变",
     "settings.light": "浅色",
     "settings.line_height": "行高",
@@ -649,7 +649,7 @@ export const ZH_CN_MESSAGES = {
     "settings.mcp_ai_search_clear_desc": "删除本账号存储的全部向量并取消待处理任务。之后搜索会回退为关键词匹配，直到你重新建立索引。",
     "settings.mcp_ai_search_clear_title": "清空 AI 搜索索引？",
     "settings.mcp_ai_search_cleared": "已清空 {count} 条向量",
-    "settings.mcp_ai_search_desc": "笔记在你自己 Cloudflare 账号内私有嵌入，向量存放在你自己的数据库，每个账号独立索引。搜索工具会自动融合关键词与语义结果，内容变化会在后台建立索引。",
+    "settings.mcp_ai_search_desc": "笔记通过你配置的外部 Embedding API 私有嵌入，向量存放在你自己的数据库，每个账号独立索引。搜索工具会自动融合关键词与语义结果，内容变化会在后台建立索引。",
     "settings.mcp_ai_search_disabled": "已关闭 AI 搜索",
     "settings.mcp_ai_search_enabled": "已开启 AI 搜索，正在建立索引…",
     "settings.mcp_ai_search_indexed": "已索引 {count} 篇笔记",
@@ -659,7 +659,7 @@ export const ZH_CN_MESSAGES = {
     "settings.mcp_ai_search_reindex_title": "重建 AI 搜索索引？",
     "settings.mcp_ai_search_reindexed": "已将 {count} 篇笔记加入重建队列",
     "settings.mcp_ai_search_unavailable": "不可用",
-    "settings.mcp_ai_search_unavailable_desc": "这个部署还没有配置 Workers AI，因此 AI 搜索保持关闭，使用关键词搜索。在 wrangler.toml 中添加 AI 绑定即可启用。",
+    "settings.mcp_ai_search_unavailable_desc": "这个部署还没有配置外部 Embedding API，因此 AI 搜索保持关闭，使用关键词搜索。设置 EMBEDDING_BASE_URL、EMBEDDING_API_KEY 和 EMBEDDING_MODEL 即可启用。",
     "settings.mcp_api_key_copy_warning": "请立即复制此密钥——之后不会再显示",
     "settings.mcp_api_key_create": "创建密钥",
     "settings.mcp_api_key_created": "API 密钥已创建",
@@ -674,20 +674,20 @@ export const ZH_CN_MESSAGES = {
     "settings.mcp_api_key_unused": "从未使用",
     "settings.mcp_api_key_used": "上次使用于 {time}",
     "settings.mcp_api_keys": "API 密钥",
-    "settings.mcp_api_keys_desc": "给无法走 OAuth 的小型、通用或无名 MCP 客户端使用。用普通的 Bearer 请求头认证；密钥在创建时继承上方读写权限，可随时撤销。",
+    "settings.mcp_api_keys_desc": "给小型、通用或无名 MCP 客户端使用。用普通的 Bearer 请求头认证；密钥在创建时继承上方读写权限，可随时撤销。",
     "settings.mcp_api_keys_empty": "还没有 API 密钥。为脚本或最小化 MCP 客户端创建一个吧。",
     "settings.mcp_connect_clients": "连接客户端",
-    "settings.mcp_connect_desc": "示例采用各客户端当前的远程 HTTP 与 OAuth 配置格式；支持固定 scope 的客户端会按当前设置生成权限。最终权限以浏览器授权页为准，修改权限后需要重新连接或登录。",
-    "settings.mcp_connected_clients": "已授权客户端",
+    "settings.mcp_connect_desc": "使用带 Bearer API Key 的端点连接。密钥创建时继承上方读写权限，可在此面板创建或撤销。",
+    "settings.mcp_connected_clients": "已连接 API Key",
     "settings.mcp_copied": "已复制",
     "settings.mcp_copy": "复制",
     "settings.mcp_disabled": "已停用",
     "settings.mcp_demo_desc": "这里按已配置的 Inkstone 服务器完整展示全部 MCP 选项。端点、凭据、客户端和索引统计均为示例；Demo 中所有 MCP 操作都已禁用。",
     "settings.mcp_demo_title": "仅展示的 MCP 预览",
     "settings.mcp_enable": "启用 MCP",
-    "settings.mcp_enable_desc": "控制所有账号的远程 MCP 服务；停用期间，已有授权也无法继续访问。",
-    "settings.mcp_endpoint": "远程 MCP 端点",
-    "settings.mcp_endpoint_desc": "采用 Streamable HTTP 与 OAuth 2.1（PKCE、受保护资源发现、动态客户端注册、刷新令牌）供完整 MCP 客户端使用，同时提供可撤销的静态 API 密钥（Bearer 令牌）供小型通用客户端使用。",
+    "settings.mcp_enable_desc": "控制所有账号的 MCP 服务；停用期间，已有 API Key 也无法继续访问。",
+    "settings.mcp_endpoint": "MCP 端点",
+    "settings.mcp_endpoint_desc": "采用 Streamable HTTP 与可撤销的静态 API Key。每个 Key 只属于一个账号，可随时撤销。",
     "settings.mcp_generic_client": "通用 / 无名客户端（API 密钥）",
     "settings.mcp_generic_client_snippet": "# 任意小型或无名 MCP 客户端 / 脚本 / SDK（先在上方“API 密钥”处创建一个密钥）\nclaude mcp add-json inkstone '{bearerJson}'\n\n# 或直接在任意 MCP SDK 中设置请求头：{ \"Authorization\": \"Bearer ink_...\" }\n# 用 curl 快速验证端点：\ncurl -X POST \"{endpoint}\" \\\n  -H \"Authorization: Bearer <API_KEY>\" \\\n  -H \"Content-Type: application/json\" \\\n  -H \"Accept: application/json, text/event-stream\" \\\n  -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-11-25\",\"capabilities\":{},\"clientInfo\":{\"name\":\"curl\",\"version\":\"1.0\"}}}'",
     "settings.mcp_grant_revoked": "已撤销客户端访问权",
@@ -698,9 +698,9 @@ export const ZH_CN_MESSAGES = {
     "settings.mcp_no_clients": "这个账号还没有授权任何客户端。",
     "settings.mcp_permissions": "权限",
     "settings.mcp_privacy": "隐私边界",
-    "settings.mcp_privacy_desc": "MCP 地址需要能从互联网访问，客户端才能连接；但每次笔记操作都必须通过 OAuth，并且只能访问登录账号自己的数据。AI Search 没有公开查询端点，每个账号使用独立索引。工具主动读取的内容会按预期返回给所连接的 AI 客户端，之后受该客户端自身的隐私政策约束。",
+    "settings.mcp_privacy_desc": "MCP 地址需要在 NAS 可访问的网络范围内开放；每次笔记操作都只能访问 API Key 所属账号的数据。AI Search 没有公开查询端点，每个账号使用独立索引。工具主动读取的内容会按预期返回给所连接的 AI 客户端，之后受该客户端自身的隐私政策约束。",
     "settings.mcp_private_knowledge": "私有 AI 知识库",
-    "settings.mcp_reconnect_notice": "请重新连接客户端或重新登录，以刷新它持有的 OAuth 权限。",
+    "settings.mcp_reconnect_notice": "修改权限后请创建新的 API Key，并更新客户端配置。",
     "settings.mcp_revoke": "撤销访问权",
     "settings.mcp_revoke_all": "全部撤销",
     "settings.mcp_revoke_all_desc": "这个账号连接的全部客户端都会退出登录，今后仍可重新授权。",
@@ -713,7 +713,7 @@ export const ZH_CN_MESSAGES = {
     "settings.mcp_scope_write": "写入",
     "settings.mcp_trash_access": "允许移入回收站",
     "settings.mcp_trash_access_desc": "这是独立的高风险权限，只能软删除；MCP 永远不提供永久清除功能。",
-    "settings.mcp_transport": "HTTP · OAuth 2.1 / Bearer",
+    "settings.mcp_transport": "HTTP · Bearer API Key",
     "settings.mcp_updated": "MCP 设置已更新",
     "settings.mcp_write_access": "允许修改笔记库",
     "settings.mcp_write_access_desc": "可修改笔记、目录、标签、属性和附件，也可创建共享链接或运行已配置的备份；写入带有冲突保护和幂等操作 ID。",
@@ -744,7 +744,7 @@ export const ZH_CN_MESSAGES = {
     "settings.open_github_repository": "打开 GitHub 仓库",
     "settings.open_registration_requires_password_verification": "开放注册需要验证密码",
     "settings.open_signup_aff": "前往注册（含 AFF）",
-    "settings.open_the_r2_console": "打开 R2 控制台",
+    "settings.open_the_minio_console": "打开 MinIO 控制台",
     "settings.other_devices_have_been_logged_out": "其他设备已被登出",
     "settings.overview": "概览",
     "settings.partially_completed_value0_value1": "部分成功 · {value0}/{value1}",
@@ -776,7 +776,7 @@ export const ZH_CN_MESSAGES = {
     "settings.reloaded_all_data": "已同步最新内容",
     "settings.render_and_using_katex": "显示行内公式和块级公式",
     "settings.render_mermaid_code_blocks_into_flowcharts": "将 Mermaid 代码块显示为图表",
-    "settings.runs_from_cloudflare_cron_the_page_does_not_need_to_stay_open": "按照设定频率自动备份，无需保持页面打开",
+    "settings.runs_from_local_scheduler_the_page_does_not_need_to_stay_open": "按照设定频率自动备份，由本地 scheduler 在后台执行",
     "settings.s3_backup": "S3 备份",
     "settings.s3_compatible": "S3 兼容",
     "settings.s3_compatible_object_storage_with_10_gb_free_and_no_credit_card_required": "兼容 S3 的对象存储，免费容量 10 GB，无需信用卡。",
@@ -1143,7 +1143,7 @@ aliases:
 :::
 
 ::: tab-item 搜索与 AI
-命令面板、关键词搜索，以及可选的 Workers AI 语义/混合搜索。每个账号使用独立索引；AI 不可用时自动回退到关键词结果。
+命令面板、关键词搜索，以及可选的外部 Embedding 语义/混合搜索。每个账号使用独立索引；Embedding 不可用时自动回退到关键词结果。
 :::
 
 ::: tab-item 安全与备份
@@ -1155,10 +1155,9 @@ aliases:
 
 在 **设置 → MCP** 中，站长可以启用远程 MCP 服务，每个账号再决定是否允许写入或移入回收站：
 
-- Codex、Claude Code 等完整 MCP 客户端通过带 PKCE 的 OAuth 2.1 授权；可以随时撤销单个或全部客户端。
-- 脚本或不支持 OAuth 的精简客户端可以使用 \`ink_...\` API Key。Key 只显示一次，服务端只保存哈希，也可以随时撤销。
+- MCP 客户端使用带权限范围的 \`ink_...\` API Key。Key 只显示一次，服务端只保存哈希，也可以随时撤销。
 - MCP 可以搜索、分段读取、查看大纲/文件夹/标签/链接，并在明确授权后安全创建、编辑、整理、移入回收站或恢复笔记；永久删除始终不可用。
-- 配置 Workers AI 后可以建立按账号隔离的语义索引，并把语义结果与关键词结果合并。索引可重建或清空，正文变化会在后台更新。
+- 配置外部 Embedding API 后可以建立按账号隔离的语义索引，并把语义结果与关键词结果合并。索引可重建或清空，正文变化会在后台更新。
 
 > [!WARNING] 连接外部 AI 前先确认隐私政策
 > Inkstone 会隔离账号并校验权限，但已授权客户端实际读取到的内容，之后仍由该客户端处理。

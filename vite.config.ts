@@ -5,7 +5,6 @@ import tailwindcss from '@tailwindcss/vite'
 import { inkstonePwa } from './pwa.config.ts'
 
 const r = (p: string) => fileURLToPath(new URL(p, import.meta.url))
-const ephemeralDevState = process.env.INKSTONE_EPHEMERAL_DEV === '1'
 
 const normalizeModuleId = (id: string) => id.replace(/\\/g, '/')
 
@@ -63,23 +62,12 @@ const getVendorChunkName = (id: string) => {
   return null
 }
 
-const config: UserConfigFnPromise = async ({ mode, command }) => ({
+const config: UserConfigFnPromise = async ({ mode: _mode }) => ({
   plugins: [
     react(),
     katexWoff2Only(),
     tailwindcss(),
     inkstonePwa(),
-    ...(mode === 'demo'
-      ? []
-      : [
-          (await import('@cloudflare/vite-plugin')).cloudflare({
-            configPath: mode === 'kv' ? './wrangler.kv.toml' : undefined,
-            persistState: !ephemeralDevState,
-            ...(command === 'serve' && mode !== 'ai'
-              ? { config: (worker) => { delete worker.ai } }
-              : {}),
-          }),
-        ]),
   ],
 
   resolve: {
@@ -101,7 +89,7 @@ const config: UserConfigFnPromise = async ({ mode, command }) => ({
   },
 
   build: {
-    ...(mode === 'demo' ? { outDir: 'dist/demo' } : {}),
+    outDir: 'dist/client',
     target: 'esnext',
     sourcemap: false,
     chunkSizeWarningLimit: 250,

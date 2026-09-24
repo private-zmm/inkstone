@@ -1,4 +1,4 @@
-export async function setMeta(db: D1Database, key: string, value: string): Promise<void> {
+export async function setMeta(db: Database, key: string, value: string): Promise<void> {
   await db
     .prepare(
       `INSERT INTO app_meta (key, value) VALUES (?1, ?2)
@@ -9,7 +9,7 @@ export async function setMeta(db: D1Database, key: string, value: string): Promi
     .run()
 }
 
-export async function getMeta(db: D1Database, key: string): Promise<string | null> {
+export async function getMeta(db: Database, key: string): Promise<string | null> {
   const row = await db
     .prepare(`SELECT value FROM app_meta WHERE key = ?1`)
     .bind(key)
@@ -18,7 +18,7 @@ export async function getMeta(db: D1Database, key: string): Promise<string | nul
 }
 
 export async function selectQueueUsersRoundRobin(
-  db: D1Database,
+  db: Database,
   table: 'ai_index_queue' | 'fts_index_queue',
   cursorKey: string,
   limit: number,

@@ -9,9 +9,7 @@ const forbiddenCjk = /[\p{Script=Han}\u3000-\u303f\uff00-\uffef]/u;
 const visibleAttributes = new Set(['alt', 'aria-label', 'description', 'hint', 'label', 'placeholder', 'title']);
 const allowedHanFragments = new Map([
     [path.resolve('README.md'), ['<a href="./README_ZH.md">\u4e2d\u6587</a>']],
-    // The OAuth consent page is a self-contained HTML document with its own
-    // language switch (cookie-based); it does not use the React i18n layer.
-    [path.resolve('src/worker/routes/mcp-authorize.ts'), [
+    [path.resolve('src/worker/mcp/server.ts'), [
         'AI \u4e0e MCP',
         '\u6388\u6743',
         '\u5207\u6362\u4e3a\u82f1\u6587',
@@ -28,7 +26,7 @@ const allowedHanFragments = new Map([
         '\u79fb\u5165\u56de\u6536\u7ad9',
         '\u4ec5\u8f6f\u5220\u9664\uff1bMCP \u4e0d\u63d0\u4f9b\u6c38\u4e45\u6e05\u9664\u529f\u80fd\u3002',
         '\u9690\u79c1',
-        'Cloudflare \u6258\u7ba1\u9759\u6001\u52a0\u5bc6\u7684\u670d\u52a1\u6570\u636e\u3002\u53ea\u6709\u5de5\u5177\u8bfb\u53d6\u7b14\u8bb0\u65f6\uff0c\u5185\u5bb9\u624d\u4f1a\u53d1\u9001\u7ed9 ${clientName}\uff0c\u4e4b\u540e\u7531\u8be5\u5ba2\u6237\u7aef\u7684\u9690\u79c1\u653f\u7b56\u7ea6\u675f\u3002',
+        '\u672c\u5730\u90e8\u7f72\u4fdd\u62a4\u52a0\u5bc6\u7684\u670d\u52a1\u6570\u636e\u3002\u53ea\u6709\u5de5\u5177\u8bfb\u53d6\u7b14\u8bb0\u65f6\uff0c\u5185\u5bb9\u624d\u4f1a\u53d1\u9001\u7ed9 ${clientName}\uff0c\u4e4b\u540e\u7531\u8be5\u5ba2\u6237\u7aef\u7684\u9690\u79c1\u653f\u7b56\u7ea6\u675f\u3002',
         '\u53d6\u6d88',
         '\u5141\u8bb8\u8bbf\u95ee',
         '\u767b\u5f55\u4ee5\u6388\u6743 ${clientName}',
@@ -42,7 +40,7 @@ const allowedHanFragments = new Map([
         '\u6388\u6743\u5931\u8d25',
         '\u6253\u5f00 Inkstone',
         'MCP \u5df2\u5728 Inkstone \u8bbe\u7f6e\u4e2d\u505c\u7528\u3002',
-        '\u672a\u77e5\u7684 OAuth \u5ba2\u6237\u7aef\u3002',
+        '\u672a\u77e5\u7684 API Key \u5ba2\u6237\u7aef\u3002',
         'Inkstone \u4f1a\u8bdd\u5df2\u8fc7\u671f\uff0c\u8bf7\u767b\u5f55\u540e\u91cd\u8bd5\u3002',
         '\u4e2d\u6587',
     ]],
@@ -87,7 +85,6 @@ for (const file of [
     'SECURITY.md',
     'vite.config.ts',
     'vitest.config.ts',
-    'wrangler.toml',
     ...fs.readdirSync(process.cwd()).filter((name) => /^tsconfig.*\.json$/.test(name)),
 ]) {
     const target = path.resolve(file);

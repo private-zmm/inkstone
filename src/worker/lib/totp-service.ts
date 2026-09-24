@@ -57,7 +57,7 @@ export interface CompletedTotpLogin {
   recoveryCodesRemaining: number | null
 }
 
-export async function hasEnabledTotp(db: D1Database, userId: string): Promise<boolean> {
+export async function hasEnabledTotp(db: Database, userId: string): Promise<boolean> {
   const row = await db.prepare(
     `SELECT 1 AS present FROM totp_credentials
       WHERE user_id = ?1 AND enabled_at IS NOT NULL`,
@@ -66,7 +66,7 @@ export async function hasEnabledTotp(db: D1Database, userId: string): Promise<bo
 }
 
 export async function createTotpLoginChallenge(
-  db: D1Database,
+  db: Database,
   userId: string,
   now = Date.now(),
 ): Promise<TotpLoginChallenge> {
@@ -92,7 +92,7 @@ export async function getTotpStatus(env: Env, userId: string): Promise<TotpStatu
       GROUP BY c.user_id, c.enabled_at`,
   ).bind(userId).first<{ enabled_at: number | null; recovery_codes: number }>()
   return {
-    available: Boolean(env.CREDENTIAL_VAULT),
+    available: Boolean(env.ENCRYPTION_KEY),
     enabled: row?.enabled_at != null,
     enabledAt: row?.enabled_at ?? null,
     recoveryCodesRemaining: row?.enabled_at == null ? 0 : Number(row.recovery_codes || 0),
@@ -159,7 +159,7 @@ export async function startTotpSetup(input: {
 }
 
 export async function cancelTotpSetup(input: {
-  db: D1Database
+  db: Database
   userId: string
   sessionId: string
   setupToken: unknown
@@ -214,7 +214,7 @@ export async function confirmTotpSetup(input: {
   const hashes = await Promise.all(
     recoveryCodes.map((code) => hashRecoveryCode(input.userId, normalizeRecoveryCode(code)!)),
   )
-  const statements: D1PreparedStatement[] = [
+  const statements: PreparedStatement[] = [
     input.env.DB.prepare(
       `UPDATE totp_credentials SET
          enabled_at = ?1,
@@ -293,7 +293,7 @@ export async function regenerateRecoveryCodes(input: {
   const hashes = await Promise.all(
     recoveryCodes.map((code) => hashRecoveryCode(input.userId, normalizeRecoveryCode(code)!)),
   )
-  const statements: D1PreparedStatement[] = [
+  const statements: PreparedStatement[] = [
     input.env.DB.prepare(
       `UPDATE totp_credentials SET
          recovery_generation = ?1,
@@ -361,7 +361,7 @@ export async function disableTotp(input: {
   const credential = await requireEnabledCredential(input.env, input.userId)
   const recoveryCode = normalizeRecoveryCode(input.code)
   const operationId = newId()
-  let statements: D1PreparedStatement[]
+  let statements: PreparedStatement[]
 
   if (recoveryCode) {
     const codeHash = await hashRecoveryCode(input.userId, recoveryCode)
@@ -475,7 +475,7 @@ export async function completeTotpLogin(input: {
   const sessionToken = newSessionToken()
   const sessionHash = await hashToken(sessionToken)
   const expiresAt = now + SESSION_TTL_MS
-  let results: D1Result[]
+  let results: QueryResult[]
   let recoveryCodeUsed = false
 
   if (recoveryCode) {
@@ -581,7 +581,7 @@ export async function completeTotpLogin(input: {
   }
 }
 
-async function loadCredential(db: D1Database, userId: string): Promise<TotpCredentialRow | null> {
+async function loadCredential(db: Database, userId: string): Promise<TotpCredentialRow | null> {
   return db.prepare(
     `SELECT secret_ciphertext, enabled_at,
             pending_token_hash, pending_session_id, pending_expires_at,
@@ -599,7 +599,7 @@ async function requireEnabledCredential(env: Env, userId: string): Promise<TotpC
 }
 
 async function countRecoveryCodes(
-  db: D1Database,
+  db: Database,
   userId: string,
   generation: string,
 ): Promise<number> {
@@ -618,14 +618,14 @@ function factorThrottle(userId: string, action: string): { failureKeys: string[]
 }
 
 async function beginFactorAttempt(
-  db: D1Database,
+  db: Database,
   throttle: { failureKeys: string[]; workKey: string },
 ): Promise<void> {
   await consumeWorkBudget(db, throttle.workKey)
   await assertFactorUnlocked(db, throttle)
 }
 
-async function consumeWorkBudget(db: D1Database, workKey: string): Promise<void> {
+async function consumeWorkBudget(db: Database, workKey: string): Promise<void> {
   try {
     await consumeAttemptBudget(db, [{ key: workKey, maxAttempts: 8, windowMs: 10 * 60 * 1000 }])
   } catch (error) {
@@ -635,7 +635,7 @@ async function consumeWorkBudget(db: D1Database, workKey: string): Promise<void>
 }
 
 async function assertFactorUnlocked(
-  db: D1Database,
+  db: Database,
   throttle: { failureKeys: string[] },
 ): Promise<void> {
   try {
@@ -647,7 +647,7 @@ async function assertFactorUnlocked(
 }
 
 async function rejectFactor(
-  db: D1Database,
+  db: Database,
   throttle: { failureKeys: string[] },
   kind: 'code' | 'setup',
   workKey?: string,
@@ -661,7 +661,7 @@ async function rejectFactor(
 }
 
 async function clearFactorAttempts(
-  db: D1Database,
+  db: Database,
   throttle: { failureKeys: string[]; workKey?: string },
   extraWorkKey?: string,
 ): Promise<void> {
@@ -696,6 +696,6 @@ function tooManyAttempts(error: ThrottleError): ApiError {
   )
 }
 
-function changed(result: D1Result | undefined): boolean {
+function changed(result: QueryResult | undefined): boolean {
   return (result?.meta.changes ?? 0) > 0
 }

@@ -21,7 +21,7 @@ export function isBitmapAvatarDataUrl(value: string | null | undefined): boolean
 }
 
 export interface StoredAvatarLocation {
-  storage: 'r2' | 'kv'
+  storage: 'minio'
   userId: string
   objectId: string
   extension: 'png' | 'jpg' | 'webp'
@@ -29,11 +29,11 @@ export interface StoredAvatarLocation {
 }
 
 export function parseStoredAvatarUrl(value: string | null | undefined): StoredAvatarLocation | null {
-  const match = /^\/api\/avatars\/(r2|kv)\/([0-9a-hjkmnp-tv-z]{26})\/([0-9a-hjkmnp-tv-z]{26})\.(png|jpg|webp)$/.exec(
+  const match = /^\/api\/avatars\/(minio)\/([0-9a-hjkmnp-tv-z]{26})\/([0-9a-hjkmnp-tv-z]{26})\.(png|jpg|webp)$/.exec(
     value ?? '',
   )
   if (!match) return null
-  const storage = match[1] as 'r2' | 'kv'
+  const storage = match[1] as 'minio'
   const userId = match[2]!
   const objectId = match[3]!
   const extension = match[4] as 'png' | 'jpg' | 'webp'

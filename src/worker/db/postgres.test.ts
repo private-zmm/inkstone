@@ -1,0 +1,43 @@
+import { describe, expect, it } from 'vitest'
+import { normalizePostgresSql } from './postgres'
+
+describe('normalizePostgresSql', () => {
+  it('translates numbered parameters without changing their indexes', () => {
+    expect(normalizePostgresSql(
+      'SELECT * FROM folders WHERE parent_id IS ?3 AND color IS NOT ?5',
+    )).toBe(
+      'SELECT * FROM folders WHERE parent_id IS NOT DISTINCT FROM $3 AND color IS DISTINCT FROM $5',
+    )
+  })
+
+  it('translates anonymous parameters while ignoring question marks in strings', () => {
+    expect(normalizePostgresSql(
+      "SELECT * FROM links WHERE user_id = ? AND target_key LIKE ? ESCAPE '?'",
+    )).toBe(
+      "SELECT * FROM links WHERE user_id = $1 AND target_key ILIKE $2 ESCAPE '?'",
+    )
+  })
+
+  it('translates SQLite JSON and conflict syntax', () => {
+    expect(normalizePostgresSql(
+      "INSERT OR IGNORE INTO tags (id) SELECT json_extract(j.value, '$.id') FROM json_each(?1) AS j",
+    )).toBe(
+      "INSERT INTO tags (id) SELECT (j.value ->> 'id') FROM jsonb_array_elements($1::jsonb) AS j ON CONFLICT DO NOTHING",
+    )
+  })
+
+  it('maps the AI queue replacement to a PostgreSQL upsert', () => {
+    expect(normalizePostgresSql(
+      'INSERT OR REPLACE INTO ai_index_queue (user_id, note_id, kind, created_at) VALUES (?1, ?2, ?3, ?4)',
+    )).toContain('ON CONFLICT (user_id, note_id) DO UPDATE SET')
+  })
+
+  it('keeps SQLite case-insensitive comparisons and bounded row cleanup', () => {
+    expect(normalizePostgresSql(
+      'DELETE FROM mcp_operations WHERE rowid IN (SELECT rowid FROM mcp_operations WHERE created_at < ?1 ORDER BY created_at, rowid LIMIT ?2)',
+    )).toContain('ctid IN (SELECT ctid FROM mcp_operations')
+    expect(normalizePostgresSql(
+      'SELECT * FROM tags WHERE name = ?1 COLLATE NOCASE ORDER BY name COLLATE NOCASE',
+    )).toBe('SELECT * FROM tags WHERE LOWER(name) = LOWER($1) ORDER BY LOWER(name)')
+  })
+})

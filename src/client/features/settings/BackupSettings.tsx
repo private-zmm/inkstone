@@ -141,7 +141,7 @@ export function BackupSettings() {
       { }
       <section>
         <h3 className="mb-1 text-[11px] font-semibold tracking-[0.06em] text-[var(--text-quaternary)]">{t("settings.automatic_backups")}</h3>
-        <SettingRow title={t("settings.frequency")} description={t("settings.runs_from_cloudflare_cron_the_page_does_not_need_to_stay_open")}>
+        <SettingRow title={t("settings.frequency")} description={t("settings.runs_from_local_scheduler_the_page_does_not_need_to_stay_open")}>
           <Segmented<BackupSchedule> label={t("settings.frequency")} value={settings.backup.schedule} onChange={(schedule) => void update({ backup: { schedule } })} options={[
             { value: 'off', label: t("common.close") },
             { value: 'hourly', label: t("settings.hourly") },
@@ -483,11 +483,11 @@ function TargetForm({ target, onClose, onSaved, }: {
           </div>)}
 
         <Field label={t("settings.name")} required>
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("settings.for_example_primary_r2_backup")}/>
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("settings.for_example_primary_backup")}/>
         </Field>
 
         {type === 's3' ? (<>
-            <Field label={t("settings.endpoint")} hint={t("settings.leave_blank_unless_the_provider_requires_it_for_r2_use_url")}>
+            <Field label={t("settings.endpoint")} hint={t("settings.leave_blank_unless_the_provider_requires_it_for_endpoint")}>
               <Input value={form.endpoint} onChange={(e) => setForm({ ...form, endpoint: e.target.value })} placeholder="https://…"/>
             </Field>
             <div className="grid grid-cols-2 gap-3">

@@ -20,7 +20,7 @@ export function isSessionToken(token: string): boolean {
   return /^[a-f0-9]{64}$/.test(token)
 }
 
-export async function createSession(db: D1Database, userId: string): Promise<string> {
+export async function createSession(db: Database, userId: string): Promise<string> {
   const token = newSessionToken()
   const now = Date.now()
   await db
@@ -30,21 +30,21 @@ export async function createSession(db: D1Database, userId: string): Promise<str
   return token
 }
 
-export async function renewSession(db: D1Database, sessionId: string): Promise<void> {
+export async function renewSession(db: Database, sessionId: string): Promise<void> {
   await db
     .prepare(`UPDATE sessions SET expires_at = ?1 WHERE id = ?2`)
     .bind(Date.now() + SESSION_TTL_MS, sessionId)
     .run()
 }
 
-export async function destroySession(db: D1Database, token: string): Promise<void> {
+export async function destroySession(db: Database, token: string): Promise<void> {
   if (!isSessionToken(token)) return
   await db.prepare(`DELETE FROM sessions WHERE id = ?1`).bind(await hashToken(token)).run()
 }
 
 
 export async function destroyOtherSessions(
-  db: D1Database,
+  db: Database,
   userId: string,
   keepSessionId: string,
 ): Promise<void> {

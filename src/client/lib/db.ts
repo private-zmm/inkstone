@@ -451,9 +451,8 @@ function isSiteInfo(value: unknown): value is SiteInfo {
   return typeof value.name === 'string' &&
     typeof value.initialized === 'boolean' &&
     typeof value.registrationOpen === 'boolean' &&
-    typeof value.r2Enabled === 'boolean' &&
-    typeof value.kvEnabled === 'boolean' &&
-    (value.attachmentStorage === 'r2' || value.attachmentStorage === 'kv' || value.attachmentStorage === null) &&
+    typeof value.minioEnabled === 'boolean' &&
+    (value.attachmentStorage === 'minio' || value.attachmentStorage === null) &&
     typeof value.realtimeEnabled === 'boolean' &&
     typeof value.version === 'string'
 }

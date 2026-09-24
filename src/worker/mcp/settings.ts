@@ -22,16 +22,16 @@ interface McpPreferencesRow {
   updated_at: number
 }
 
-export async function isMcpEnabled(db: D1Database): Promise<boolean> {
+export async function isMcpEnabled(db: Database): Promise<boolean> {
   const stored = await getMeta(db, MCP_ENABLED_KEY)
   return stored !== '0'
 }
 
-export async function setMcpEnabled(db: D1Database, enabled: boolean): Promise<void> {
+export async function setMcpEnabled(db: Database, enabled: boolean): Promise<void> {
   await setMeta(db, MCP_ENABLED_KEY, enabled ? '1' : '0')
 }
 
-export async function getMcpPreferences(db: D1Database, userId: string): Promise<McpPreferences> {
+export async function getMcpPreferences(db: Database, userId: string): Promise<McpPreferences> {
   const row = await db.prepare(
     `SELECT write_enabled, trash_enabled, updated_at
        FROM mcp_preferences WHERE user_id = ?1`,
@@ -42,7 +42,7 @@ export async function getMcpPreferences(db: D1Database, userId: string): Promise
 }
 
 export async function updateMcpPreferences(
-  db: D1Database,
+  db: Database,
   userId: string,
   patch: Partial<Pick<McpPreferences, 'writeEnabled' | 'trashEnabled'>>,
 ): Promise<McpPreferences> {
@@ -53,7 +53,7 @@ export async function updateMcpPreferences(
 }
 
 export async function putMcpPreferences(
-  db: D1Database,
+  db: Database,
   userId: string,
   value: McpPreferences,
 ): Promise<void> {

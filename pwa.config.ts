@@ -138,8 +138,8 @@ function serviceWorkerSource(buildId: string, coreUrls: string[], allUrls: strin
 	const CACHE_META_URL = '/.inkstone-cache-meta'
 	const MANIFEST_META_PREFIX = '/.inkstone-offline-manifest/'
 	const CURRENT_MANIFEST_URL = MANIFEST_META_PREFIX + BUILD_ID
-	const NETWORK_ONLY_EXACT_PATHS = ['/authorize', '/mcp']
-	const NETWORK_ONLY_PATH_PREFIXES = ['/api/', '/authorize/', '/mcp/', '/oauth/', '/.well-known/']
+	const NETWORK_ONLY_EXACT_PATHS = ['/mcp']
+	const NETWORK_ONLY_PATH_PREFIXES = ['/api/', '/mcp/']
 	let warmPromise = null
 
 self.addEventListener('install', (event) => {

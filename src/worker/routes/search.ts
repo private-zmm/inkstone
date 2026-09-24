@@ -115,7 +115,7 @@ export interface UserSearchResult {
 }
 
 export async function searchUserNotes(
-  db: D1Database,
+  db: Database,
   userId: string,
   raw: string,
   limit: number,
@@ -198,7 +198,7 @@ searchRoutes.get('/search', requireAuth, async (c) => {
 })
 
 async function ftsSearch(
-  db: D1Database,
+  db: Database,
   userId: string,
   q: ParsedQuery,
   limit: number,
@@ -238,7 +238,7 @@ async function ftsSearch(
 }
 
 async function likeSearch(
-  db: D1Database,
+  db: Database,
   userId: string,
   q: ParsedQuery,
   limit: number,

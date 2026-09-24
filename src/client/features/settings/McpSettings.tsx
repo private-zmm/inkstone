@@ -607,17 +607,11 @@ export function McpSettings() {
 }
 
 function clientSnippets(info: McpSettingsInfo): Array<{ id: string; name: string; value: string }> {
-  const scopes = [
-    'notes:read',
-    ...(info.preferences.writeEnabled ? ['notes:write'] : []),
-    ...(info.preferences.trashEnabled ? ['notes:trash'] : []),
-  ]
-  const scopeText = scopes.join(' ')
   const endpoint = info.endpoint
   const claudeJson = JSON.stringify({
     type: 'http',
     url: endpoint,
-    oauth: { scopes: scopeText },
+    headers: { Authorization: 'Bearer <API_KEY>' },
   })
   const bearerJson = JSON.stringify({
     type: 'http',
@@ -638,12 +632,12 @@ function clientSnippets(info: McpSettingsInfo): Array<{ id: string; name: string
     {
       id: 'hermes',
       name: 'Hermes Agent',
-      value: `hermes mcp add inkstone --url "${endpoint}" --auth oauth\nhermes mcp login inkstone`,
+      value: `hermes mcp add inkstone --url "${endpoint}" --header "Authorization: Bearer <API_KEY>"`,
     },
     {
       id: 'openclaw',
       name: 'OpenClaw',
-      value: `openclaw mcp add inkstone --url "${endpoint}" --transport streamable-http --auth oauth --oauth-scope "${scopeText}"\nopenclaw mcp login inkstone`,
+      value: `openclaw mcp add inkstone --url "${endpoint}" --transport streamable-http --header "Authorization: Bearer <API_KEY>"`,
     },
     {
       id: 'generic',

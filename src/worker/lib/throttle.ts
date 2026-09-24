@@ -31,7 +31,7 @@ function placeholders(n: number): string {
   return Array.from({ length: n }, (_, i) => `?${i + 1}`).join(', ')
 }
 
-export async function assertNotLocked(db: D1Database, inputs: readonly ThrottleInput[]): Promise<void> {
+export async function assertNotLocked(db: Database, inputs: readonly ThrottleInput[]): Promise<void> {
   const keys = normalizeTargets(inputs).map((target) => target.key)
   if (!keys.length) return
   const { results } = await db
@@ -49,7 +49,7 @@ export async function assertNotLocked(db: D1Database, inputs: readonly ThrottleI
 }
 
 export async function consumeAttemptBudget(
-  db: D1Database,
+  db: Database,
   inputs: readonly AttemptBudgetTarget[],
 ): Promise<void> {
   const targets = normalizeAttemptBudgets(inputs)
@@ -92,7 +92,7 @@ export async function consumeAttemptBudget(
 }
 
 export async function recordLoginFailure(
-  db: D1Database,
+  db: Database,
   inputs: readonly ThrottleInput[],
 ): Promise<void> {
   const targets = normalizeTargets(inputs)
@@ -123,7 +123,7 @@ export async function recordLoginFailure(
 }
 
 export async function clearLoginFailures(
-  db: D1Database,
+  db: Database,
   inputs: readonly ThrottleInput[],
 ): Promise<void> {
   const keys = normalizeTargets(inputs).map((target) => target.key)

@@ -159,7 +159,7 @@ notesRoutes.get('/', async (c) => {
   ])
 
   const total = Number((countResult?.results?.[0] as { total?: unknown } | undefined)?.total ?? 0)
-  const rows = listResult?.results as NoteRow[] | undefined ?? []
+  const rows = listResult?.results as unknown as NoteRow[] | undefined ?? []
   const pageRows = rows.slice(0, limit)
   const notes = pageRows.map(toNoteSummary)
   const body: ListNotesResponse = {
@@ -238,7 +238,7 @@ notesRoutes.post('/trash/empty', async (c) => {
         .bind(userId),
     )
     const results = await c.env.DB.batch(statements)
-    const changeResult = results.at(-2) as D1Result<{ seq: number }> | undefined
+    const changeResult = results.at(-2) as QueryResult<{ seq: number }> | undefined
     purged = results.at(-1)?.meta.changes ?? 0
     deletionCursor = changeResult?.results?.at(-1)?.seq
     if (purged) scheduleFtsDrain(c)
@@ -441,7 +441,7 @@ notesRoutes.patch('/:id', async (c) => {
       WHERE id = ?${binds.length - 2} AND user_id = ?${binds.length - 1} AND rev = ?${binds.length}`,
   ).bind(...binds)
 
-  const statements: D1PreparedStatement[] = [update]
+  const statements: PreparedStatement[] = [update]
   let derivedTags: string[] | null = null
 
   if (contentChanged && !body.quiet && row.content) {
@@ -514,7 +514,7 @@ notesRoutes.patch('/:id', async (c) => {
     const current = await loadNote(c.env.DB, userId, id)
     throw ApiError.conflict('This note was modified elsewhere', { server: current })
   }
-  const changeResult = results.at(-1) as D1Result<{ seq: number }> | undefined
+  const changeResult = results.at(-1) as QueryResult<{ seq: number }> | undefined
   let rewroteInbound = false
   if (newTitle !== row.title) {
     const ambiguous = await c.env.DB.prepare(
@@ -617,7 +617,7 @@ notesRoutes.delete('/:id', async (c) => {
   if (!updated?.meta.changes) {
     throw ApiError.conflict('This note was modified elsewhere', { server: await loadNote(c.env.DB, userId, id) })
   }
-  const changeResult = results.at(-1) as D1Result<{ seq: number }> | undefined
+  const changeResult = results.at(-1) as QueryResult<{ seq: number }> | undefined
   await broadcastCursor(c, changeResult?.results?.[0]?.seq)
   scheduleFtsDrain(c)
   const note = toNote({ ...row, deleted_at: now, updated_at: now, rev: nextRev })
@@ -677,7 +677,7 @@ notesRoutes.delete('/:id/purge', async (c) => {
   const guarded = (sql: string) => c.env.DB
     .prepare(`${sql} AND ${shiftSqlPlaceholders(guard, 1)}`)
     .bind(id, id, userId, row.rev)
-  const statements: D1PreparedStatement[] = [
+  const statements: PreparedStatement[] = [
     guarded(`DELETE FROM note_tags WHERE note_id = ?1`),
     guarded(`DELETE FROM links WHERE source_note_id = ?1`),
     c.env.DB.prepare(
@@ -730,7 +730,7 @@ notesRoutes.delete('/:id/purge', async (c) => {
       .bind(userId),
   )
   const results = await c.env.DB.batch(statements)
-  const changeResult = results.at(-3) as D1Result<{ seq: number }> | undefined
+  const changeResult = results.at(-3) as QueryResult<{ seq: number }> | undefined
   const deleted = results.at(-2)
   if (!deleted?.meta.changes) throw ApiError.conflict('Note state changed. Refresh and try again')
   const broadcastedCursor = await broadcastCursor(c, changeResult?.results?.[0]?.seq)
@@ -974,11 +974,11 @@ notesRoutes.get('/:id/backlinks', async (c) => {
 })
 
 
-async function loadNote(db: D1Database, userId: string, id: string): Promise<Note> {
+async function loadNote(db: Database, userId: string, id: string): Promise<Note> {
   return toNote(await loadNoteRow(db, userId, id))
 }
 
-async function loadNoteRow(db: D1Database, userId: string, id: string): Promise<NoteRow> {
+async function loadNoteRow(db: Database, userId: string, id: string): Promise<NoteRow> {
   const row = await db
     .prepare(`SELECT ${NOTE_COLUMNS_FULL} FROM notes n WHERE n.id = ?1 AND n.user_id = ?2`)
     .bind(id, userId)
@@ -1001,7 +1001,7 @@ function linkContext(content: string, title: string): string {
 }
 
 async function rewriteInboundWikiLinks(
-  db: D1Database,
+  db: Database,
   userId: string,
   targetNoteId: string,
   fromTitle: string,
@@ -1049,7 +1049,7 @@ async function rewriteInboundWikiLinks(
         WHERE id = ?1 AND user_id = ?2 AND rev = ?3
           AND content_hash = ?4 AND title = ?5 AND updated_at = ?6)`
       const guardValues = [note.id, userId, nextRev, hash, note.title, now] as const
-      const statements: D1PreparedStatement[] = [
+      const statements: PreparedStatement[] = [
         db.prepare(
           `UPDATE notes SET content = ?1, excerpt = ?2, word_count = ?3, char_count = ?4,
              content_hash = ?5, rev = ?6, updated_at = ?7
@@ -1241,7 +1241,7 @@ function shiftSqlPlaceholders(sql: string, offset: number): string {
 }
 
 async function resolveFolderId(
-  db: D1Database,
+  db: Database,
   userId: string,
   folderId: string | null | undefined,
 ): Promise<string | null> {

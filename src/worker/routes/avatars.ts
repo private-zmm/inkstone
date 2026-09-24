@@ -21,7 +21,7 @@ avatarRoutes.get('/:storage/:userId/:file', async (c) => {
     throw new ApiError(
       503,
       'storage_unavailable',
-      `${location.storage === 'r2' ? 'R2' : 'Workers KV'} avatar storage is not bound`,
+      'MinIO avatar storage is not configured',
     )
   }
 

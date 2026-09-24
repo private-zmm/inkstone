@@ -17,7 +17,7 @@
 
 ## About
 
-Inkstone is a browser-based notebook that runs on Cloudflare Workers. Notes always remain plain Markdown text; on top of that foundation, the application provides focused writing, live preview, lexical and optional semantic search, bidirectional links, offline editing, multi-device synchronization, private AI access, public sharing, and off-site backups.
+Inkstone is a browser-based notebook for self-hosted Node.js and Docker Compose deployments. Notes always remain plain Markdown text; on top of that foundation, the application provides focused writing, live preview, lexical and optional semantic search, bidirectional links, offline editing, multi-device synchronization, private AI access, public sharing, and backups.
 
 It is a complete self-hosted application. The deployer retains control of the database, attachments, and runtime environment.
 
@@ -30,8 +30,8 @@ Every new account automatically receives two standard starter notes, one in Chin
 | Writing | CodeMirror 6 editor, independently editable note titles, **two-note editor groups**, per-group editor/split/preview layouts, synchronized scrolling, outline, **focus mode**, **typewriter mode**, **autosave**, and **version history** |
 | Markdown | GFM tables and task lists, footnotes, Obsidian-style comments, WikiLinks, embeds, block IDs, callouts, details blocks, tabs, **math**, **Mermaid diagrams**, **PrismJS syntax highlighting**, and **Front Matter** |
 | Organization | Nested folders with drag-and-drop ordering, inline tags, favorites, pinning, archive, trash, **wiki links**, backlinks, block references, note embeds, and a relationship graph |
-| Search | D1 FTS5 **full-text search** with Chinese indexing, filters, recent notes, command-palette navigation, and optional private **semantic/hybrid search** powered by Workers AI |
-| **MCP** | Private remote MCP, OAuth 2.1 with PKCE, revocable `ink_...` API keys, standard `search`/`fetch`, bounded reads, revision-safe writes, separate trash permission, and per-account grant management |
+| Search | PostgreSQL full-text search with Chinese indexing, filters, recent notes, command-palette navigation, and optional private **semantic/hybrid search** powered by an external embedding API |
+| **MCP** | Private remote MCP with revocable `ink_...` API keys, standard `search`/`fetch`, bounded reads, revision-safe writes, and separate trash permission |
 | Reliability | Installable PWA, offline app launch, browser-side cache, **offline write queue and optimistic concurrency control**, immediate local mutations with rollback, stale-sync protection, conflict copies, realtime notifications, and elected-tab polling fallback |
 | Sharing | Public note links with optional access passwords and expiration dates |
 | Portability | JSON and ZIP exports, directly readable **Markdown**, attachment export, and **manual or scheduled WebDAV/S3 backups** |
@@ -41,23 +41,20 @@ Every new account automatically receives two standard starter notes, one in Chin
 
 | Component | Purpose |
 | --- | --- |
-| Cloudflare D1 | Accounts, notes, folders, tags, settings, versions, shares, lexical indexes, per-account AI embeddings, and background indexing queues |
-| Cloudflare R2 or Workers KV | Attachment and uploaded-avatar binaries through the `FILES` or `FILES_KV` binding |
-| Workers KV `OAUTH_KV` | OAuth client registrations, authorization codes, access and refresh tokens, and grants; note bodies are not stored here |
-| Workers AI `AI` binding | Optional embedding generation for semantic search; unavailable deployments continue to use lexical search |
+| PostgreSQL | Accounts, notes, folders, tags, settings, versions, shares, lexical indexes, per-account AI embeddings, and background indexing queues |
+| MinIO | Attachment, avatar, and backup object storage through the S3-compatible API |
+| Redis | Scheduler lock, realtime Pub/Sub notifications, and short-lived coordination |
+| External embedding API | Optional embedding generation for semantic search; unavailable deployments continue to use lexical search |
 | Browser IndexedDB | Local cache and pending offline writes |
-| `SyncHub` Durable Object | Realtime change notifications between active clients |
-| `CredentialVault` Durable Object | Isolated storage for the key used to encrypt backup credentials |
+| Node WebSocket + Redis | Realtime change notifications between active clients |
+| PostgreSQL encryption | Encrypted backup credentials protected by `ENCRYPTION_KEY` |
 | WebDAV or S3 storage | User-configured off-site backups |
 
 ## Deployment
 
-1. Fork the Inkstone repository to your GitHub account.
-2. Open [Cloudflare Workers & Pages](https://dash.cloudflare.com/?to=/:account/workers-and-pages/create).
-3. Select **Continue with GitHub**, then choose your forked repository.
-4. For R2 mode, set the build command to `npm run build` and the deploy command to `npm run deploy`.
-   - To use KV mode, change the deploy command to `npm run deploy:kv`.
-5. After deployment completes, open the generated Workers URL.
+1. Copy `.env.example` to `.env` and set strong local secrets.
+2. Start the stack with `docker compose up -d --build`.
+3. Open the NAS address shown by your reverse proxy or `http://localhost:3000`.
 
 Existing databases are upgraded automatically through versioned, idempotent migrations. Keep a current backup before updating any self-hosted deployment. When a newer stable Inkstone release is available, the owner receives a focused reminder without interrupting regular members.
 
@@ -74,16 +71,14 @@ Existing databases are upgraded automatically through versioned, idempotent migr
 
 | Command | Purpose |
 | --- | --- |
-| `npm run dev` | Start the local Worker and client |
-| `npm run dev:kv` | Start locally with the KV attachment configuration |
-| `npm run dev:demo` | Start the reset-on-refresh browser-only demo |
+| `npm run dev:node` | Start the local Node server |
+| `npm run dev:scheduler` | Start the local background scheduler |
 | `npm run typecheck` | Run TypeScript project checks |
 | `npm run test:unit` | Run the Vitest unit test suite |
 | `npm run i18n:check` | Verify parity between the English and Chinese locale resources |
 | `npm run comments:check` | Enforce the source-comment policy |
 | `npm run build` | Type-check and create a production build |
-| `npm run deploy:kv` | Build and deploy with `wrangler.kv.toml` |
-| `npm run deploy:demo` | Build and deploy the static browser-only demo |
+| `docker compose up -d --build` | Build and deploy the complete NAS stack |
 | `npm run test:e2e` | Exercise the API against a running disposable local instance |
 
 The end-to-end script creates, changes, and deletes data at `http://localhost:7712`. Run it only against a fresh local state dedicated to testing.
@@ -94,7 +89,7 @@ The end-to-end script creates, changes, and deletes data at `http://localhost:77
 src/
 ├── client/   React interface, editor, preview, and local state
 ├── shared/   Shared types, limits, locale resources, and Markdown utilities
-└── worker/   Hono API, authentication, D1 access, sync, sharing, and backups
+└── worker/   Hono API, authentication, PostgreSQL access, sync, sharing, and backups
 public/       Static assets
 scripts/      Repository checks and end-to-end verification scripts
 tests/        Cross-module regression tests

@@ -10,7 +10,7 @@ import {
 
 
 export async function requireCurrentPassword(
-  db: D1Database,
+  db: Database,
   userId: string,
   input: unknown,
 ): Promise<string> {

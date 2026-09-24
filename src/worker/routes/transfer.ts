@@ -109,7 +109,7 @@ transferRoutes.get('/export', async (c) => {
 
     const snapshot = await buildSnapshot(c.env, userId)
     const archive = createBackupArchive(snapshot)
-    const fixed = new FixedLengthStream(archive.byteLength)
+    const fixed = new TransformStream<Uint8Array, Uint8Array>()
     void archive.stream.pipeTo(fixed.writable).catch((error) => {
       console.error('[inkstone] Streaming ZIP export failed:', error)
     })
@@ -231,7 +231,7 @@ transferRoutes.post('/import', async (c) => {
             c,
             userId,
             entries.map((entry) => ({
-              file: new File([entry.data], entry.path.split('/').at(-1) ?? 'file'),
+              file: new File([entry.data.buffer as ArrayBuffer], entry.path.split('/').at(-1) ?? 'file'),
               path: entry.path.slice(backup.rootPrefix.length),
             })),
             backup.manifest,
@@ -454,7 +454,7 @@ async function importBackupAttachment(
     throw new Error(`${entry.filename}: the attachment exceeds ${formatBytes(LIMITS.attachmentMaxBytes)}`)
   }
   if (!selectAttachmentStorage(env)) {
-    throw new Error('This instance has no R2 or Workers KV attachment binding and cannot restore attachments')
+    throw new Error('This instance has no MinIO attachment storage and cannot restore attachments')
   }
 
   const candidate: PreparedAttachmentCandidate = {
@@ -593,7 +593,7 @@ async function importBackupMarkdown(
 }
 
 async function loadBackupAttachmentTargets(
-  db: D1Database,
+  db: Database,
   userId: string,
   hashes: readonly string[],
 ): Promise<Map<string, string>> {
@@ -936,7 +936,7 @@ async function prepareBundleAttachments(
 
   if (!candidates.length) return { idMap: new Map(), created: [] }
   if (!selectAttachmentStorage(env)) {
-    throw new Error('This instance has no R2 or Workers KV attachment binding and cannot restore attachments')
+    throw new Error('This instance has no MinIO attachment storage and cannot restore attachments')
   }
 
   const existingAttachments = await loadExistingAttachments(
@@ -1026,7 +1026,7 @@ interface ExistingAttachmentRow {
 }
 
 async function loadExistingAttachments(
-  db: D1Database,
+  db: Database,
   userId: string,
   ids: readonly string[],
 ): Promise<Map<string, ExistingAttachmentRow>> {
@@ -1063,11 +1063,11 @@ async function loadExistingAttachments(
 }
 
 async function loadPendingAttachmentCleanupIds(
-  db: D1Database,
+  db: Database,
   userId: string,
   sourceIds: readonly string[],
 ): Promise<Set<string>> {
-  const prefixes = [`r2:${userId}/`, `kv:${userId}/`]
+  const prefixes = [`minio:${userId}/`]
   const ids = new Set<string>()
   if (!sourceIds.length) return ids
   const { results } = await db.prepare(
@@ -1104,7 +1104,7 @@ async function existingAttachmentMatches(
 }
 
 async function linkImportedAttachments(
-  db: D1Database,
+  db: Database,
   userId: string,
   created: readonly CreatedImportedAttachment[],
   noteIdMap: ReadonlyMap<string, string>,
@@ -1136,7 +1136,7 @@ function rewriteAttachmentReferences(content: string, idMap: ReadonlyMap<string,
 }
 
 async function loadExistingNoteIndex(
-  db: D1Database,
+  db: Database,
   userId: string,
   id: string,
   ctx: ImportContext,
@@ -1163,7 +1163,7 @@ async function loadExistingNoteIndex(
 }
 
 async function upsertImportMappings(
-  db: D1Database,
+  db: Database,
   userId: string,
   entity: 'note' | 'attachment',
   mappings: readonly { sourceId: string; targetId: string }[],
@@ -1184,7 +1184,7 @@ async function upsertImportMappings(
 }
 
 async function restoreTagMetadata(
-  db: D1Database,
+  db: Database,
   userId: string,
   rawTags: unknown[],
 ): Promise<void> {
@@ -1384,7 +1384,7 @@ async function updateImportedNote(
     current.rev,
   )
 
-  const statements: D1PreparedStatement[] = [update]
+  const statements: PreparedStatement[] = [update]
   if (current.content !== input.content || current.title !== title) {
     const snapshotAt = Date.now()
     statements.push(
@@ -1536,7 +1536,7 @@ async function insertNote(
 }
 
 async function primeFolderCache(
-  db: D1Database,
+  db: Database,
   userId: string,
   cache: Map<string, string>,
 ): Promise<void> {
@@ -1559,7 +1559,7 @@ async function primeFolderCache(
 }
 
 async function ensureFolderPath(
-  db: D1Database,
+  db: Database,
   userId: string,
   path: string,
   ctx: ImportContext,

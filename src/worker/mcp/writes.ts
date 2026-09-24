@@ -5,7 +5,7 @@ import type { Note } from '@shared/types'
 import { NOTE_COLUMNS_FULL, toNote, type NoteRow } from '../db/rows'
 import { FTS_NOTE_MATCH_SQL } from '../db/fts'
 import { buildNoteDerivedStatements, LINK_TARGET_SUBQUERY } from '../db/writes'
-import type { Env } from '../env'
+import type { Env, TaskContext } from '../env'
 import { sha256Hex } from '../lib/encoding'
 import { ApiError } from '../lib/errors'
 import { isValidId, newId } from '../lib/id'
@@ -21,7 +21,7 @@ export interface McpWriteContext {
   env: Env
   userId: string
   ftsEnabled: boolean
-  executionCtx: ExecutionContext
+  executionCtx: TaskContext
 }
 
 export async function createMcpNote(
@@ -178,7 +178,7 @@ export async function trashMcpNote(
       const nextRev = row.rev + 1
       const guard = `EXISTS (SELECT 1 FROM notes
         WHERE id = ?1 AND user_id = ?2 AND rev = ?3 AND deleted_at IS NOT NULL)`
-      const statements: D1PreparedStatement[] = [
+      const statements: PreparedStatement[] = [
         context.env.DB.prepare(
           `UPDATE notes SET deleted_at = ?1, updated_at = ?1, rev = ?2
             WHERE id = ?3 AND user_id = ?4 AND rev = ?5 AND deleted_at IS NULL`,
@@ -330,7 +330,7 @@ async function patchNote(
     WHERE id = ?1 AND user_id = ?2 AND rev = ?3
       AND content_hash = ?4 AND title = ?5 AND updated_at = ?6)`
   const mutationValues = [row.id, context.userId, nextRev, newHash, newTitle, now] as const
-  const statements: D1PreparedStatement[] = [update]
+  const statements: PreparedStatement[] = [update]
 
   if (contentChanged && row.content) {
     statements.push(
@@ -446,18 +446,18 @@ async function afterMutation(context: McpWriteContext): Promise<void> {
   )
 }
 
-async function loadNote(db: D1Database, userId: string, id: string): Promise<Note> {
+async function loadNote(db: Database, userId: string, id: string): Promise<Note> {
   return toNote(await loadNoteRow(db, userId, id))
 }
 
-async function loadNoteOrNull(db: D1Database, userId: string, id: string): Promise<Note | null> {
+async function loadNoteOrNull(db: Database, userId: string, id: string): Promise<Note | null> {
   const row = await db.prepare(
     `SELECT ${NOTE_COLUMNS_FULL} FROM notes n WHERE n.id = ?1 AND n.user_id = ?2`,
   ).bind(id, userId).first<NoteRow>()
   return row ? toNote(row) : null
 }
 
-async function loadNoteRow(db: D1Database, userId: string, id: string): Promise<NoteRow> {
+async function loadNoteRow(db: Database, userId: string, id: string): Promise<NoteRow> {
   const row = await db.prepare(
     `SELECT ${NOTE_COLUMNS_FULL} FROM notes n WHERE n.id = ?1 AND n.user_id = ?2`,
   ).bind(id, userId).first<NoteRow>()
@@ -475,7 +475,7 @@ function assertExpectedRevision(row: NoteRow, expectedRev: number): void {
 }
 
 async function resolveFolderId(
-  db: D1Database,
+  db: Database,
   userId: string,
   folderId: string | null | undefined,
 ): Promise<string | null> {

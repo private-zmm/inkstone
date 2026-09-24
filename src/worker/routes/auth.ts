@@ -276,7 +276,7 @@ authRoutes.put('/profile', requireAuth, async (c) => {
     avatarUrl = storedAvatar.preference
   }
 
-  const statements: D1PreparedStatement[] = []
+  const statements: PreparedStatement[] = []
   const previousAvatar = hasAvatar ? storedAvatarCleanup(current.avatarUrl) : null
   if (previousAvatar) {
     statements.push(
@@ -307,7 +307,7 @@ authRoutes.put('/profile', requireAuth, async (c) => {
     ),
   )
 
-  let results: D1Result[]
+  let results: QueryResult[]
   try {
     results = await c.env.DB.batch(statements)
   } catch (error) {
@@ -365,7 +365,7 @@ authRoutes.post('/logout', async (c) => {
 })
 
 async function enforceAttemptBudget(
-  db: D1Database,
+  db: Database,
   targets: Parameters<typeof consumeAttemptBudget>[1],
 ): Promise<void> {
   try {

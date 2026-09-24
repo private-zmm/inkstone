@@ -476,9 +476,10 @@ function markdownExampleBodies(text: string): string[] {
           collecting = []
         }
       } else if (marker[0]! === fenceChar && marker.length >= fenceLen && !(fence[2] ?? '').trim()) {
-        // A closing fence may only be followed by spaces or tabs.
         bodies.push(collecting.join('\n'))
         collecting = null
+      } else if (collecting !== null) {
+        collecting.push(line)
       }
       continue
     }

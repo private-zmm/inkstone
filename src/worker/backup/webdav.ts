@@ -133,7 +133,7 @@ export async function webdavDeliver(
     return { files: 1, bytes: archive.byteLengthNumber }
   }
 
-  const fixed = new FixedLengthStream(archive.byteLength)
+  const fixed = new TransformStream<Uint8Array, Uint8Array>()
   const pump = archive.stream.pipeTo(fixed.writable, { signal })
   const upload = webdavFetch(childUrl(base, target), {
     method: 'PUT',

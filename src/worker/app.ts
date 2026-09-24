@@ -16,7 +16,6 @@ import { settingsRoutes } from './routes/settings'
 import { shareManageRoutes, sharePageRoutes, shareRoutes } from './routes/share'
 import { transferRoutes } from './routes/transfer'
 import { updateRoutes } from './routes/update'
-import { mcpAuthorizeRoutes } from './routes/mcp-authorize'
 import { mcpSettingsRoutes } from './routes/mcp-settings'
 import type { AppBindings } from './env'
 import { selectAttachmentStorage } from './attachments/backend'
@@ -59,13 +58,7 @@ export function createApp() {
     c.set('database', await initializeDatabase(c.env))
     await next()
   })
-  app.use('/authorize', async (c, next) => {
-    c.set('database', await initializeDatabase(c.env))
-    await next()
-  })
-
   app.use('/api/*', loadSession)
-  app.use('/authorize', loadSession)
 
   app.get('/api/health', async (c) => {
     const database = c.get('database')
@@ -74,12 +67,11 @@ export function createApp() {
       ok: true,
       database: 'ready',
       fts: database.ftsEnabled,
-      r2: Boolean(c.env.FILES),
-      kv: Boolean(c.env.FILES_KV),
+      minio: Boolean(c.env.FILES),
       attachmentStorage: selectAttachmentStorage(c.env),
-      realtime: Boolean(c.env.SYNC_HUB),
-      credentialVault: Boolean(c.env.CREDENTIAL_VAULT),
-      mcp: Boolean(c.env.OAUTH_KV),
+      realtime: true,
+      credentialVault: Boolean(c.env.ENCRYPTION_KEY),
+      mcp: true,
       time: Date.now(),
     })
   })
@@ -107,29 +99,11 @@ export function createApp() {
 
 
   app.route('/s', sharePageRoutes)
-  app.route('/', mcpAuthorizeRoutes)
-
-
   app.all('*', (c) => c.env.ASSETS.fetch(c.req.raw))
 
   return app
 }
 
-function authorizationFormAction(requestUrl: string, response: Response): string {
-  const sources = ["'self'"]
-  const url = new URL(requestUrl)
-  if (url.pathname !== '/authorize' || response.status !== 200 ||
-      !response.headers.get('Content-Type')?.includes('text/html')) {
-    return sources.join(' ')
-  }
-  const redirectUri = url.searchParams.get('redirect_uri')
-  if (!redirectUri) return sources.join(' ')
-  try {
-    const callback = new URL(redirectUri)
-    if ((callback.protocol === 'http:' || callback.protocol === 'https:') && callback.origin !== url.origin) {
-      sources.push(callback.origin)
-    }
-  } catch {
-  }
-  return sources.join(' ')
+function authorizationFormAction(_requestUrl: string, _response: Response): string {
+  return "'self'"
 }

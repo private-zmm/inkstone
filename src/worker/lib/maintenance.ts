@@ -8,7 +8,7 @@ export interface OperationalPurgeResult {
 }
 
 export async function purgeExpiredOperationalData(
-  db: D1Database,
+  db: Database,
   now = Date.now(),
   limit = 500,
 ): Promise<OperationalPurgeResult> {

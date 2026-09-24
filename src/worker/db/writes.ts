@@ -20,20 +20,20 @@ export const LINK_TARGET_SUBQUERY = `(SELECT candidate.id FROM notes candidate
   ORDER BY candidate.created_at ASC, candidate.id ASC LIMIT 1)`
 
 export function changeStatement(
-  db: D1Database,
+  db: Database,
   userId: string,
   entity: ChangeEntity,
   entityId: string,
   op: ChangeOp,
   at = Date.now(),
-): D1PreparedStatement {
+): PreparedStatement {
   return db
     .prepare(`INSERT INTO changes (user_id, entity, entity_id, op, at) VALUES (?1, ?2, ?3, ?4, ?5)`)
     .bind(userId, entity, entityId, op, at)
 }
 
 export async function recordChange(
-  db: D1Database,
+  db: Database,
   userId: string,
   entity: ChangeEntity,
   entityId: string,
@@ -49,7 +49,7 @@ export async function recordChange(
   return row?.seq ?? 0
 }
 
-export async function currentCursor(db: D1Database, userId: string): Promise<number> {
+export async function currentCursor(db: Database, userId: string): Promise<number> {
   const row = await db
     .prepare(`SELECT MAX(seq) AS seq FROM changes WHERE user_id = ?1`)
     .bind(userId)
@@ -58,7 +58,7 @@ export async function currentCursor(db: D1Database, userId: string): Promise<num
 }
 
 export interface SyncDerivedOptions {
-  db: D1Database
+  db: Database
   userId: string
   noteId: string
   title: string
@@ -81,14 +81,14 @@ export interface SyncDerivedOptions {
 
 export function buildNoteDerivedStatements(
   opts: SyncDerivedOptions,
-): { statements: D1PreparedStatement[]; tags: string[] } {
+): { statements: PreparedStatement[]; tags: string[] } {
   const { db, userId, noteId, title, content, ftsEnabled } = opts
   const now = Date.now()
   const tagNames = extractTags(content)
   const links = extractWikiLinks(content)
   const tagRows = JSON.stringify(tagNames.map((name) => ({ id: newId(), name })))
   const linkRows = JSON.stringify(links.map((link) => ({ key: link.key, target: link.target })))
-  const statements: D1PreparedStatement[] = []
+  const statements: PreparedStatement[] = []
   const guarded = opts.expectedRev !== undefined ||
     opts.expectedContentHash !== undefined ||
     opts.expectedTitle !== undefined ||
@@ -242,7 +242,7 @@ function shiftPlaceholders(sql: string, offset: number): string {
   return sql.replace(/\?(\d+)/g, (_match, value: string) => `?${Number(value) + offset}`)
 }
 
-export async function pruneOrphanTags(db: D1Database, userId: string): Promise<void> {
+export async function pruneOrphanTags(db: Database, userId: string): Promise<void> {
   await db
     .prepare(
       `DELETE FROM tags
@@ -254,8 +254,8 @@ export async function pruneOrphanTags(db: D1Database, userId: string): Promise<v
 }
 
 export async function runBatched(
-  db: D1Database,
-  statements: D1PreparedStatement[],
+  db: Database,
+  statements: PreparedStatement[],
   chunk = 40,
 ): Promise<void> {
   for (let i = 0; i < statements.length; i += chunk) {

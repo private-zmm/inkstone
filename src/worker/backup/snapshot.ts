@@ -254,7 +254,7 @@ export async function buildSnapshot(env: Env, userId: string): Promise<Snapshot>
 }
 
 async function loadReferencedAttachments(
-  db: D1Database,
+  db: Database,
   userId: string,
   ids: ReadonlySet<string>,
   target: Map<string, AttachmentSnapshotRow>,
@@ -321,8 +321,8 @@ export async function buildJsonExport(env: Env, userId: string): Promise<Uint8Ar
     version: 1,
     exportedAt: Date.now(),
     user: { login: user?.login ?? 'unknown', name: user?.name ?? '' },
-    folders: (folderRows as D1Result<FolderRow>).results.map(toFolder),
-    tags: (tagRows as D1Result<TagRow>).results.map(toTag),
+    folders: (folderRows as unknown as QueryResult<FolderRow>).results.map(toFolder),
+    tags: (tagRows as unknown as QueryResult<TagRow>).results.map(toTag),
   }
   const chunks: Uint8Array[] = []
   let byteLength = 0
@@ -465,16 +465,12 @@ function verifyAttachmentStream(
   source: ReadableStream<Uint8Array>,
   row: AttachmentSnapshotRow,
 ): ReadableStream<Uint8Array> {
-  const digest = new crypto.DigestStream('SHA-256')
-  const digestWriter = digest.getWriter()
   const prefixLimit = 64 * 1024
   let prefix = new Uint8Array(0)
   let bytes = 0
+  const chunks: Uint8Array[] = []
 
-  const fail = async (message: string): Promise<never> => {
-    await digestWriter.abort(message).catch(() => {})
-    throw new Error(message)
-  }
+  const fail = async (message: string): Promise<never> => { throw new Error(message) }
 
   return source.pipeThrough(new TransformStream<Uint8Array, Uint8Array>({
     async transform(chunk, controller) {
@@ -487,7 +483,7 @@ function verifyAttachmentStream(
         next.set(chunk.subarray(0, take), prefix.byteLength)
         prefix = next
       }
-      await digestWriter.write(chunk)
+      chunks.push(chunk.slice())
       controller.enqueue(chunk)
     },
     async flush() {
@@ -495,8 +491,13 @@ function verifyAttachmentStream(
       if (safeAttachmentMime(prefix, row.mime) !== row.mime) {
         await fail(`Attachment type metadata does not match: ${row.filename}`)
       }
-      await digestWriter.close()
-      const actual = bytesToHex(new Uint8Array(await digest.digest))
+      const combined = new Uint8Array(chunks.reduce((total, chunk) => total + chunk.byteLength, 0))
+      let offset = 0
+      for (const chunk of chunks) {
+        combined.set(chunk, offset)
+        offset += chunk.byteLength
+      }
+      const actual = bytesToHex(new Uint8Array(await crypto.subtle.digest('SHA-256', combined.buffer)))
       if (actual !== row.sha256) {
         throw new Error(`Attachment checksum does not match: ${row.filename}`)
       }

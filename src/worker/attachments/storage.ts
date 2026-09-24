@@ -80,7 +80,7 @@ export async function persistAttachment(
     throw new ApiError(
       503,
       'storage_unavailable',
-      'Attachment storage is not configured. Bind R2 or Workers KV before uploading files.',
+      'MinIO attachment storage is not configured.',
     )
   }
 
@@ -177,7 +177,7 @@ export async function rollbackPersistedAttachments(
   env: Env,
   attachments: readonly PersistedAttachment[],
 ): Promise<void> {
-  let statements: D1PreparedStatement[] = []
+  let statements: PreparedStatement[] = []
   const flush = async () => {
     if (!statements.length) return
     await env.DB.batch(statements)

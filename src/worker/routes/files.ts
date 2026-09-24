@@ -72,7 +72,7 @@ function toAttachment(row: AttachmentRow): Attachment {
 }
 
 async function collectAttachmentReferences(
-  db: D1Database,
+  db: Database,
   userId: string,
   wantedIds?: ReadonlySet<string>,
 ): Promise<Map<string, number>> {
@@ -100,14 +100,14 @@ async function collectAttachmentReferences(
 }
 
 async function collectAttachmentIdsThroughBoundary(
-  db: D1Database,
+  db: Database,
   userId: string,
   boundary: { created_at: number; id: string },
 ): Promise<Set<string>> {
   const ids = new Set<string>()
   let cursor: { createdAt: number; id: string } | null = null
   while (true) {
-    const query: D1PreparedStatement = cursor
+    const query: PreparedStatement = cursor
       ? db.prepare(
           `SELECT created_at, id FROM attachments WHERE user_id = ?1
             AND (created_at < ?2 OR (created_at = ?2 AND id <= ?3))
@@ -258,7 +258,7 @@ filesRoutes.get('/:id', async (c) => {
     throw new ApiError(
       503,
       'storage_unavailable',
-      `${row.storage === 'r2' ? 'R2' : 'Workers KV'} attachment storage is not bound, so the attachment cannot be read`,
+      'MinIO attachment storage is not configured, so the attachment cannot be read',
     )
   }
   const object = await readAttachmentObjectStream(c.env, row.storage, attachmentObjectKey(row))
@@ -311,7 +311,7 @@ filesRoutes.delete('/:id', requireAuth, async (c) => {
     .first<AttachmentRow>()
   if (!row) throw ApiError.notFound('Attachment not found')
 
-  const statements: D1PreparedStatement[] = [
+  const statements: PreparedStatement[] = [
     c.env.DB.prepare(
       `INSERT OR IGNORE INTO attachment_cleanup (object_key, user_id, created_at)
        SELECT ?1, user_id, ?2 FROM attachments WHERE id = ?3 AND user_id = ?4`,
@@ -354,15 +354,15 @@ filesRoutes.post('/prune', requireAuth, async (c) => {
         ORDER BY seq DESC LIMIT 1`,
     ).bind(userId),
   ])
-  const boundary = (boundaryResult as D1Result<{ created_at: number; id: string }>).results[0]
+  const boundary = (boundaryResult as QueryResult<{ created_at: number; id: string }>).results[0]
   if (!boundary) return c.json({ removed: 0, freedBytes: 0 })
-  const scanCursor = (cursorResult as D1Result<{ seq: number }>).results[0]?.seq ?? 0
+  const scanCursor = (cursorResult as QueryResult<{ seq: number }>).results[0]?.seq ?? 0
   const attachmentIds = await collectAttachmentIdsThroughBoundary(c.env.DB, userId, boundary)
   const referenced = await collectAttachmentReferences(c.env.DB, userId, attachmentIds)
 
   let removed = 0
   let freedBytes = 0
-  let statements: D1PreparedStatement[] = []
+  let statements: PreparedStatement[] = []
   const operations: Array<
     { kind: 'queue' | 'mapping' } | { kind: 'delete'; file: AttachmentRow }
   > = []
@@ -383,7 +383,7 @@ filesRoutes.post('/prune', requireAuth, async (c) => {
 
   let pageCursor: { createdAt: number; id: string } | null = null
   while (true) {
-    const query: D1PreparedStatement = pageCursor
+    const query: PreparedStatement = pageCursor
       ? c.env.DB.prepare(
           `SELECT id, user_id, note_id, filename, mime, size, width, height, storage, created_at
              FROM attachments WHERE user_id = ?1

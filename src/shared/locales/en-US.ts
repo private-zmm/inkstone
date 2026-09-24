@@ -5,7 +5,7 @@ export const EN_US_MESSAGES = {
     "mobile.back_to_account": "Back to Me",
     "app.boot_label": "Preparing your notebook…",
     "app.document_title": "Inkstone",
-    "app.meta_description": "A private, self-hosted Markdown notebook built on Cloudflare.",
+    "app.meta_description": "A private, self-hosted Markdown notebook for your NAS.",
     "api.error.bad_request": "The request is invalid",
     "api.error.conflict": "This content was changed elsewhere. Refresh and try again",
     "api.error.forbidden": "You do not have permission to perform this action",
@@ -94,7 +94,7 @@ export const EN_US_MESSAGES = {
     "auth.recovery_code": "Recovery code",
     "auth.recovery_code_used": "Recovery code used",
     "auth.recovery_codes_remaining": "You have {count} unused recovery code(s) remaining. Replace them in Settings if needed.",
-    "auth.self_hosted_on_cloudflare_workers_your_data_is_yours": "Private notes · Your data stays under your control",
+    "auth.self_hosted_local_your_data_is_yours": "Private notes · Your data stays under your control",
     "auth.sign_in": "Sign in",
     "auth.sign_up": "Sign up",
     "auth.this_is_a_private_instance_registration_is_closed_so_only_existing_accou": "This is a private instance. Registration is closed, so only existing accounts can sign in.",
@@ -601,7 +601,7 @@ export const EN_US_MESSAGES = {
     "settings.files_that_have_been_backed_up_there_will_not_be_deleted": "Files that have been backed up there will not be deleted.",
     "settings.finally_click_manage_key_permissions_and_turn_on_admin_access_otherwise": "Finally, click Manage Key Permissions and turn on Admin Access, otherwise writing backups will fail.",
     "settings.focus_mode": "Focus mode",
-    "settings.for_example_primary_r2_backup": "For example: Primary R2 backup",
+    "settings.for_example_primary_backup": "For example: Primary backup",
     "settings.free_10_gb": "Free 10 GB",
     "settings.free_5_gb": "Free 5 GB",
     "settings.freed_value0": "Freed {value0}",
@@ -632,7 +632,7 @@ export const EN_US_MESSAGES = {
     "settings.last_backup_succeeded": "Last backup succeeded",
     "settings.last_saved_value0": "Last saved {value0}",
     "settings.latest_backups": "Latest backups",
-    "settings.leave_blank_unless_the_provider_requires_it_for_r2_use_url": "Leave blank unless the provider requires it. For R2, use https://<account-id>.r2.cloudflarestorage.com",
+    "settings.leave_blank_unless_the_provider_requires_it_for_endpoint": "Leave blank unless the provider requires an endpoint. For MinIO, use http://minio:9000",
     "settings.leave_the_key_blank_to_leave_it_unchanged": "Leave the key blank to leave it unchanged",
     "settings.light": "Light",
     "settings.line_height": "Line height",
@@ -648,7 +648,7 @@ export const EN_US_MESSAGES = {
     "settings.mcp_ai_search_clear_desc": "Removes every stored vector for this account and cancels pending indexing. Search falls back to keywords until you rebuild the index.",
     "settings.mcp_ai_search_clear_title": "Clear the AI search index?",
     "settings.mcp_ai_search_cleared": "Cleared {count} embeddings",
-    "settings.mcp_ai_search_desc": "Notes are embedded privately on your Cloudflare account and stored in your own database, one index per account. The search tools merge keyword and semantic results automatically. Content changes are indexed in the background.",
+    "settings.mcp_ai_search_desc": "Notes are embedded through your configured external API and stored in your own database, one index per account. The search tools merge keyword and semantic results automatically. Content changes are indexed in the background.",
     "settings.mcp_ai_search_disabled": "AI search disabled",
     "settings.mcp_ai_search_enabled": "AI search enabled, building the index…",
     "settings.mcp_ai_search_indexed": "{count} notes indexed",
@@ -658,7 +658,7 @@ export const EN_US_MESSAGES = {
     "settings.mcp_ai_search_reindex_title": "Rebuild the AI search index?",
     "settings.mcp_ai_search_reindexed": "Queued {count} notes for re-indexing",
     "settings.mcp_ai_search_unavailable": "Unavailable",
-    "settings.mcp_ai_search_unavailable_desc": "Workers AI is not configured for this deployment, so AI search stays off and keyword search is used. Add the AI binding in wrangler.toml to enable it.",
+    "settings.mcp_ai_search_unavailable_desc": "An external embedding API is not configured for this deployment, so AI search stays off and keyword search is used. Set EMBEDDING_BASE_URL, EMBEDDING_API_KEY, and EMBEDDING_MODEL to enable it.",
     "settings.mcp_api_key_copy_warning": "Copy this key now — it will never be shown again",
     "settings.mcp_api_key_create": "Create key",
     "settings.mcp_api_key_created": "API key created",
@@ -673,20 +673,20 @@ export const EN_US_MESSAGES = {
     "settings.mcp_api_key_unused": "never used",
     "settings.mcp_api_key_used": "used {time}",
     "settings.mcp_api_keys": "API keys",
-    "settings.mcp_api_keys_desc": "For small, generic, or unnamed MCP clients that cannot run OAuth. Authenticate with a plain Bearer header; keys inherit the read/write permissions above at creation time and can be revoked at any time.",
+    "settings.mcp_api_keys_desc": "For small, generic, or unnamed MCP clients. Authenticate with a plain Bearer header; keys inherit the read/write permissions above at creation time and can be revoked at any time.",
     "settings.mcp_api_keys_empty": "No API keys yet. Create one for scripts or minimal MCP clients.",
     "settings.mcp_connect_clients": "Connect a client",
-    "settings.mcp_connect_desc": "Examples use each client's current remote HTTP and OAuth format. Clients that can pin scopes reflect the settings above; the browser consent page confirms the final permissions. Reconnect or sign in again after changing them.",
-    "settings.mcp_connected_clients": "Authorized clients",
+    "settings.mcp_connect_desc": "Use the endpoint with a Bearer API key. Keys inherit the read/write permissions above at creation time; create or revoke them in this panel.",
+    "settings.mcp_connected_clients": "Connected API keys",
     "settings.mcp_copied": "Copied",
     "settings.mcp_copy": "Copy",
     "settings.mcp_disabled": "Disabled",
     "settings.mcp_demo_desc": "This page mirrors a configured Inkstone server so you can inspect every MCP option. The endpoint, credentials, clients, and index statistics are examples; all MCP actions are disabled in the demo.",
     "settings.mcp_demo_title": "Display-only MCP preview",
     "settings.mcp_enable": "Enable MCP",
-    "settings.mcp_enable_desc": "Controls the remote MCP service for every account. Existing grants stop working while it is disabled.",
-    "settings.mcp_endpoint": "Remote MCP endpoint",
-    "settings.mcp_endpoint_desc": "Streamable HTTP with OAuth 2.1 (PKCE, protected-resource discovery, dynamic client registration, refresh tokens) for full MCP clients, plus revocable static API keys (Bearer tokens) for small generic clients.",
+    "settings.mcp_enable_desc": "Controls the MCP service for every account. Existing API keys stop working while it is disabled.",
+    "settings.mcp_endpoint": "MCP endpoint",
+    "settings.mcp_endpoint_desc": "Streamable HTTP with revocable static API keys. Each key is scoped to one account and can be revoked at any time.",
     "settings.mcp_generic_client": "Generic / unnamed client (API key)",
     "settings.mcp_generic_client_snippet": "# Any small or unnamed MCP client / script / SDK (create an API key in the section above first)\nclaude mcp add-json inkstone '{bearerJson}'\n\n# Or set the Authorization header directly in any MCP SDK: { \"Authorization\": \"Bearer ink_...\" }\n# Quick endpoint check with curl:\ncurl -X POST \"{endpoint}\" \\\n  -H \"Authorization: Bearer <API_KEY>\" \\\n  -H \"Content-Type: application/json\" \\\n  -H \"Accept: application/json, text/event-stream\" \\\n  -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-11-25\",\"capabilities\":{},\"clientInfo\":{\"name\":\"curl\",\"version\":\"1.0\"}}}'",
     "settings.mcp_grant_revoked": "Client access revoked",
@@ -697,9 +697,9 @@ export const EN_US_MESSAGES = {
     "settings.mcp_no_clients": "No client has been authorized for this account.",
     "settings.mcp_permissions": "Permissions",
     "settings.mcp_privacy": "Privacy boundary",
-    "settings.mcp_privacy_desc": "The MCP URL is reachable from the internet so your clients can connect, but every note operation requires OAuth and is limited to the signed-in account. AI Search has no public query endpoint and uses a separate index per account. Content a tool reads is intentionally returned to the connected AI client and is then governed by that client's privacy policy.",
+    "settings.mcp_privacy_desc": "The MCP URL is reachable wherever your NAS is exposed, and every note operation is limited to the account attached to the API key. AI Search has no public query endpoint and uses a separate index per account. Content a tool reads is intentionally returned to the connected AI client and is then governed by that client's privacy policy.",
     "settings.mcp_private_knowledge": "Private AI knowledge base",
-    "settings.mcp_reconnect_notice": "Reconnect the client or sign in again to refresh its OAuth scopes.",
+    "settings.mcp_reconnect_notice": "Create a new API key after changing permissions, then update the client configuration.",
     "settings.mcp_revoke": "Revoke access",
     "settings.mcp_revoke_all": "Revoke all",
     "settings.mcp_revoke_all_desc": "Every connected client for this account will be signed out. You can authorize them again later.",
@@ -712,7 +712,7 @@ export const EN_US_MESSAGES = {
     "settings.mcp_scope_write": "Write",
     "settings.mcp_trash_access": "Allow moving notes to trash",
     "settings.mcp_trash_access_desc": "Separate high-risk permission for soft-delete only. MCP never exposes permanent purge.",
-    "settings.mcp_transport": "HTTP · OAuth 2.1 / Bearer",
+    "settings.mcp_transport": "HTTP · Bearer API key",
     "settings.mcp_updated": "MCP settings updated",
     "settings.mcp_write_access": "Allow modifying the note library",
     "settings.mcp_write_access_desc": "May modify notes, folders, tags, properties, and attachments, and may create shares or run configured backups. Writes use conflict protection and stable operation IDs.",
@@ -743,7 +743,7 @@ export const EN_US_MESSAGES = {
     "settings.open_github_repository": "Open GitHub repository",
     "settings.open_registration_requires_password_verification": "Open registration requires password verification",
     "settings.open_signup_aff": "Open signup (AFF)",
-    "settings.open_the_r2_console": "Open the R2 console",
+    "settings.open_the_minio_console": "Open the MinIO console",
     "settings.other_devices_have_been_logged_out": "Other devices have been logged out",
     "settings.overview": "Overview",
     "settings.partially_completed_value0_value1": "Partially completed · {value0}/{value1}",
@@ -775,7 +775,7 @@ export const EN_US_MESSAGES = {
     "settings.reloaded_all_data": "Up to date",
     "settings.render_and_using_katex": "Display inline and block math",
     "settings.render_mermaid_code_blocks_into_flowcharts": "Display Mermaid code blocks as diagrams",
-    "settings.runs_from_cloudflare_cron_the_page_does_not_need_to_stay_open": "Back up automatically on the selected schedule; this page does not need to stay open",
+    "settings.runs_from_local_scheduler_the_page_does_not_need_to_stay_open": "Back up automatically on the selected schedule; the local scheduler runs it in the background",
     "settings.s3_backup": "S3 backup",
     "settings.s3_compatible": "S3 compatible",
     "settings.s3_compatible_object_storage_with_10_gb_free_and_no_credit_card_required": "S3-compatible object storage with 10 GB free and no credit card required.",
@@ -1142,7 +1142,7 @@ Twelve levels of drag-sortable folders, inline \`#tags\`, \`[[wiki links]]\`, ba
 :::
 
 ::: tab-item Search & AI
-Keyboard command-palette navigation, keyword search, and optional Workers AI semantic/hybrid search. Every account has a separate index, with automatic keyword fallback when AI is unavailable.
+Keyboard command-palette navigation, keyword search, and optional external semantic/hybrid search. Every account has a separate index, with automatic keyword fallback when embeddings are unavailable.
 :::
 
 ::: tab-item Safety & backup
@@ -1154,10 +1154,9 @@ Self-hosting, an installable PWA, offline editing, multi-device sync, and confli
 
 Under **Settings → MCP**, the owner can enable the remote MCP service and each account can separately decide whether to allow writes or moves to trash:
 
-- Full MCP clients such as Codex and Claude Code authorize through OAuth 2.1 with PKCE. You can revoke one client or every grant at any time.
-- Scripts and minimal clients without OAuth can use an \`ink_...\` API key. A key is shown once, stored only as a hash, and can be revoked at any time.
+- MCP clients authenticate with a scoped \`ink_...\` API key. A key is shown once, stored only as a hash, and can be revoked at any time.
 - MCP can search, read bounded ranges, inspect outlines/folders/tags/links, and—with explicit permission—safely create, edit, organize, trash, or restore notes. Permanent purge is never exposed.
-- With Workers AI configured, Inkstone builds a per-account semantic index and combines semantic and keyword results. The index can be rebuilt or cleared, and content changes are indexed in the background.
+- With an external embedding API configured, Inkstone builds a per-account semantic index and combines semantic and keyword results. The index can be rebuilt or cleared, and content changes are indexed in the background.
 
 > [!WARNING] Check an external AI client's privacy policy before connecting
 > Inkstone isolates accounts and enforces permissions, but content an authorized client actually reads is then processed by that client.

@@ -21,11 +21,9 @@ export interface SiteInfo {
 
   registrationOpen: boolean
 
-  r2Enabled: boolean
+  minioEnabled: boolean
 
-  kvEnabled: boolean
-
-  attachmentStorage: 'r2' | 'kv' | null
+  attachmentStorage: 'minio' | null
 
   realtimeEnabled: boolean
   version: string
@@ -546,14 +544,13 @@ export interface McpAiSearchStatus {
   model: string
   indexedCount: number
   pendingCount: number
-  reason: 'no_ai_binding' | null
+  reason: 'not_configured' | null
 }
 
 export interface McpSettingsInfo {
   enabled: boolean
   canManageGlobal: boolean
   endpoint: string
-  oauth: true
   preferences: McpPreferences
   apiKeys: McpApiKey[]
   aiSearch: McpAiSearchStatus

@@ -6,7 +6,7 @@ import { isPasswordHash } from './password'
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/
 
 export async function createShareAssetSession(
-  db: D1Database,
+  db: Database,
   slug: string,
   passwordHash: string,
   expiresAt: number,
@@ -29,7 +29,7 @@ export async function createShareAssetSession(
 }
 
 export async function verifyShareAssetSession(
-  db: D1Database,
+  db: Database,
   token: string | undefined | null,
   slug: string,
   passwordHash: string,
@@ -45,7 +45,7 @@ export async function verifyShareAssetSession(
   return row?.present === 1
 }
 
-export async function revokeShareAssetSessions(db: D1Database, slug: string): Promise<void> {
+export async function revokeShareAssetSessions(db: Database, slug: string): Promise<void> {
   if (!isValidSlug(slug)) return
   await db.prepare(`DELETE FROM share_asset_sessions WHERE slug = ?1`).bind(slug).run()
 }

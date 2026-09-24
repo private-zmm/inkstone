@@ -9,14 +9,14 @@ import { isValidVersion } from '@shared/version'
 const UPDATE_FETCH_TIMEOUT_MS = 5_000
 const MAX_PACKAGE_RESPONSE_BYTES = 64 * 1024
 
-type Fetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+type AssetFetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
 type FetchResult =
   | { kind: 'version'; version: string }
   | { kind: 'failure'; reason: string; status?: number; detail?: string }
 
 export async function checkRepositoryVersion(
   options: {
-    fetcher?: Fetcher
+    fetcher?: AssetFetcher
     now?: number
     timeoutMs?: number
   } = {},
@@ -45,7 +45,7 @@ export async function checkRepositoryVersion(
 }
 
 async function fetchRepositoryVersion(
-  fetcher: Fetcher,
+  fetcher: AssetFetcher,
   timeoutMs: number,
 ): Promise<FetchResult> {
   let response: Response

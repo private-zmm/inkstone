@@ -11,10 +11,9 @@ export async function buildSiteInfo(env: Env): Promise<SiteInfo> {
     name: env.APP_NAME || 'Inkstone',
     initialized: (row?.n ?? 0) > 0,
     registrationOpen: await getAllowRegistration(env.DB),
-    r2Enabled: Boolean(env.FILES),
-    kvEnabled: Boolean(env.FILES_KV),
+    minioEnabled: Boolean(env.FILES),
     attachmentStorage: selectAttachmentStorage(env),
-    realtimeEnabled: Boolean(env.SYNC_HUB),
+    realtimeEnabled: Boolean(env.REALTIME),
     version: APP_VERSION,
   }
 }

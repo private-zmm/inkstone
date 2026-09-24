@@ -1,6 +1,7 @@
-/** Defines the idempotent final D1 schema initialized by every Worker isolate. */
+/** Defines the idempotent PostgreSQL schema initialized by the local runtime. */
 import type { DatabaseState, Env } from '../env'
 import { getMeta, setMeta } from './metadata'
+import { isPostgresDatabase } from './runtime-kind'
 
 
 export const SCHEMA_STATEMENTS: readonly string[] = [
@@ -123,7 +124,7 @@ export const SCHEMA_STATEMENTS: readonly string[] = [
     sha256 TEXT NOT NULL,
     width INTEGER,
     height INTEGER,
-    storage TEXT NOT NULL CHECK (storage IN ('r2', 'kv')),
+    storage TEXT NOT NULL CHECK (storage IN ('minio')),
     created_at INTEGER NOT NULL
   )`,
   `CREATE INDEX IF NOT EXISTS idx_attachments_user ON attachments(user_id, created_at DESC)`,
@@ -131,7 +132,7 @@ export const SCHEMA_STATEMENTS: readonly string[] = [
   `CREATE INDEX IF NOT EXISTS idx_attachments_note ON attachments(note_id)`,
 
   `CREATE TABLE IF NOT EXISTS attachment_cleanup (
-    object_key TEXT PRIMARY KEY CHECK (object_key GLOB 'r2:?*' OR object_key GLOB 'kv:?*'),
+    object_key TEXT PRIMARY KEY CHECK (object_key GLOB 'minio:?*'),
     user_id TEXT NOT NULL,
     created_at INTEGER NOT NULL
   )`,
@@ -371,7 +372,7 @@ const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
     ],
   },
   {
-    // Only CREATE TABLE / INDEX statements: D1 does not reliably support
+    // Keep initialization idempotent so the local runtime can restart safely.
     // ALTER TABLE ADD COLUMN with constraints, so the AI search preference
     // lives in app_meta (key `ai-search-enabled:<userId>`) instead of a
     // new column on the pre-existing mcp_preferences table.
@@ -644,9 +645,11 @@ const REQUIRED_INDEXES = [
 ] as const
 
 
-const initializationCache = new WeakMap<D1Database, Promise<DatabaseState>>()
+const initializationCache = new WeakMap<Database, Promise<DatabaseState>>()
+const postgresInitializationCache = new WeakMap<object, Promise<DatabaseState>>()
 
 export function initializeDatabase(env: Env): Promise<DatabaseState> {
+  if (isPostgresDatabase(env.DB)) return initializePostgresDatabase(env.DB)
   const existing = initializationCache.get(env.DB)
   if (existing) return existing
 
@@ -658,7 +661,75 @@ export function initializeDatabase(env: Env): Promise<DatabaseState> {
   return pending
 }
 
-async function createSchema(db: D1Database): Promise<DatabaseState> {
+function initializePostgresDatabase(db: Database): Promise<DatabaseState> {
+  const key = db as unknown as object
+  const existing = postgresInitializationCache.get(key)
+  if (existing) return existing
+
+  const pending = (async () => {
+    const statements = SCHEMA_STATEMENTS.map(toPostgresSchemaStatement)
+    for (const statement of statements) {
+      await db.prepare(statement).run()
+    }
+    await db.prepare(
+      `CREATE TABLE IF NOT EXISTS schema_migrations (
+         version INTEGER PRIMARY KEY,
+         applied_at BIGINT NOT NULL
+       )`,
+    ).run()
+    const applied = new Set(
+      (await db.prepare(`SELECT version FROM schema_migrations`).all<{ version: number }>())
+        .results
+        .map((row) => Number(row.version)),
+    )
+    for (const migration of SCHEMA_MIGRATIONS) {
+      if (applied.has(migration.version)) continue
+      if (migration.skipIfColumnExists) {
+        const column = await db.prepare(
+          `SELECT 1 AS present FROM information_schema.columns
+             WHERE table_name = ?1 AND column_name = ?2 LIMIT 1`,
+        ).bind(migration.skipIfColumnExists.table, migration.skipIfColumnExists.column).first()
+        if (column) {
+          await db.prepare(
+            `INSERT INTO schema_migrations (version, applied_at) VALUES (?1, ?2)
+             ON CONFLICT(version) DO NOTHING`,
+          ).bind(migration.version, Date.now()).run()
+          continue
+        }
+      }
+      for (const statement of migration.statements) {
+        await db.prepare(toPostgresSchemaStatement(statement)).run()
+      }
+      await db.prepare(
+        `INSERT INTO schema_migrations (version, applied_at) VALUES (?1, ?2)
+         ON CONFLICT(version) DO NOTHING`,
+      ).bind(migration.version, Date.now()).run()
+    }
+    await setMeta(db, DATABASE_STATE_KEY, JSON.stringify({
+      schema: 'postgres-v1',
+      ftsEnabled: false,
+    }))
+    return { ftsEnabled: false }
+  })().catch((error) => {
+    postgresInitializationCache.delete(key)
+    throw error
+  })
+
+  postgresInitializationCache.set(key, pending)
+  return pending
+}
+
+function toPostgresSchemaStatement(statement: string): string {
+  return statement
+    .replace(/INTEGER\s+PRIMARY\s+KEY\s+AUTOINCREMENT/gi, 'BIGSERIAL PRIMARY KEY')
+    .replace(/\bBLOB\b/gi, 'BYTEA')
+    .replace(/([A-Za-z_][\w.]*)\s+COLLATE\s+NOCASE\b/gi, 'LOWER($1)')
+    .replace(/\bCOLLATE\s+NOCASE\b/gi, '')
+    .replace(/\bIFNULL\s*\(/gi, 'COALESCE(')
+    .replace(/CHECK\s*\(\s*object_key\s+GLOB\s+'minio:\?\*'\s*\)/i, "CHECK (object_key <> '')")
+}
+
+async function createSchema(db: Database): Promise<DatabaseState> {
   const stored = await readStoredDatabaseState(db)
   if (stored) return stored
 
@@ -700,7 +771,7 @@ async function createSchema(db: D1Database): Promise<DatabaseState> {
   return state
 }
 
-async function upgradeFtsIdentifiers(db: D1Database): Promise<void> {
+async function upgradeFtsIdentifiers(db: Database): Promise<void> {
   const table = await db.prepare(
     `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'notes_fts'`,
   ).first<{ sql: string }>()
@@ -716,7 +787,7 @@ async function upgradeFtsIdentifiers(db: D1Database): Promise<void> {
   ])
 }
 
-async function applyMigrations(db: D1Database): Promise<void> {
+async function applyMigrations(db: Database): Promise<void> {
   await db.prepare(
     `CREATE TABLE IF NOT EXISTS schema_migrations (
        version INTEGER PRIMARY KEY,
@@ -743,7 +814,7 @@ async function applyMigrations(db: D1Database): Promise<void> {
   }
 }
 
-async function readStoredDatabaseState(db: D1Database): Promise<DatabaseState | null> {
+async function readStoredDatabaseState(db: Database): Promise<DatabaseState | null> {
   try {
     const raw = await getMeta(db, DATABASE_STATE_KEY)
     if (!raw) return null
@@ -769,7 +840,7 @@ function schemaFingerprint(): string {
   return (hash >>> 0).toString(16).padStart(8, '0')
 }
 
-async function assertFinalSchema(db: D1Database): Promise<void> {
+async function assertFinalSchema(db: Database): Promise<void> {
   const { results: tableRows } = await db
     .prepare(`SELECT name FROM sqlite_master WHERE type = 'table'`)
     .all<{ name: string }>()

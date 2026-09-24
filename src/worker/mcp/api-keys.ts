@@ -1,11 +1,8 @@
 /**
  * Static API keys for MCP access.
  *
- * Small or generic MCP clients (scripts, SDKs, unnamed agents) cannot run the
- * OAuth 2.1 dance, so they authenticate with a plain `Authorization: Bearer
- * <key>` header — the universal HTTP standard. The OAuth provider resolves
- * these tokens through its official `resolveExternalToken` hook; the key is
- * never stored or returned again, only its SHA-256 hash.
+ * Clients authenticate with a plain `Authorization: Bearer <key>` header.
+ * Keys are stored only as SHA-256 hashes and can be revoked in settings.
  */
 import { sha256Hex, toBase64Url } from '../lib/encoding'
 import { ApiError } from '../lib/errors'
@@ -53,7 +50,7 @@ export function parseApiKey(token: string): string | null {
 }
 
 export async function createMcpApiKey(
-  db: D1Database,
+  db: Database,
   userId: string,
   name: string,
 ): Promise<{ record: McpApiKeyRecord; token: string }> {
@@ -80,7 +77,7 @@ export async function createMcpApiKey(
   }
 }
 
-export async function listMcpApiKeys(db: D1Database, userId: string): Promise<McpApiKeyRecord[]> {
+export async function listMcpApiKeys(db: Database, userId: string): Promise<McpApiKeyRecord[]> {
   const { results } = await db.prepare(
     `SELECT id, name, scopes, created_at, last_used_at
        FROM mcp_api_keys
@@ -103,7 +100,7 @@ export async function listMcpApiKeys(db: D1Database, userId: string): Promise<Mc
 }
 
 export async function revokeMcpApiKey(
-  db: D1Database,
+  db: Database,
   userId: string,
   id: string,
 ): Promise<boolean> {
@@ -115,7 +112,7 @@ export async function revokeMcpApiKey(
 }
 
 export async function purgeRevokedMcpApiKeys(
-  db: D1Database,
+  db: Database,
   maxAgeMs = REVOKED_KEY_RETENTION_MS,
   limit = 500,
 ): Promise<void> {
@@ -131,10 +128,10 @@ export async function purgeRevokedMcpApiKeys(
 
 /**
  * Resolves a bearer token to an account. Returns null for unknown, revoked,
- * or malformed keys so the OAuth provider can answer with 401 invalid_token.
+ * or malformed keys so the local MCP handler can answer with HTTP 401.
  */
 export async function verifyMcpApiKey(
-  db: D1Database,
+  db: Database,
   token: string,
   now = Date.now(),
 ): Promise<McpApiKeyAuth | null> {

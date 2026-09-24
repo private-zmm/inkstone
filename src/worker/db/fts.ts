@@ -17,7 +17,7 @@ const FTS_DRAIN_CURSOR_META_KEY = 'fts-index-drain-user-v1'
 export const FTS_NOTE_MATCH_SQL = `notes_fts MATCH ('note_id : "' || replace(?1, '"', '""') || '"')`
 
 
-export async function rebuildFtsIndex(db: D1Database, userId: string): Promise<number> {
+export async function rebuildFtsIndex(db: Database, userId: string): Promise<number> {
   const boundary = await db
     .prepare(`SELECT MAX(id) AS id FROM notes WHERE user_id = ?1 AND deleted_at IS NULL`)
     .bind(userId)
@@ -41,7 +41,7 @@ export async function rebuildFtsIndex(db: D1Database, userId: string): Promise<n
       .all<IndexableNote>()
     if (!results.length) break
 
-    const statements: D1PreparedStatement[] = []
+    const statements: PreparedStatement[] = []
     for (const row of results) {
       const guard = `EXISTS (SELECT 1 FROM notes WHERE id = ?1 AND user_id = ?2
         AND deleted_at IS NULL AND rev = ?3 AND content_hash = ?4
@@ -104,11 +104,11 @@ interface FtsQueueRow {
 }
 
 function buildFtsQueueItemStatements(
-  db: D1Database,
+  db: Database,
   userId: string,
   item: FtsQueueRow,
   note: IndexableNote | undefined,
-): D1PreparedStatement[] {
+): PreparedStatement[] {
   const noteId = item.note_id
   const { kind, created_at: queueVersion } = item
   if (kind === 'delete' || !note) {
@@ -157,7 +157,7 @@ function buildFtsQueueItemStatements(
 }
 
 export async function drainFtsQueue(
-  db: D1Database,
+  db: Database,
   userId: string,
   max = FTS_DRAIN_BATCH,
   ignoreDelay = false,
@@ -189,7 +189,7 @@ export async function drainFtsQueue(
     for (const note of noteRows) notes.set(note.id, note)
   }
 
-  let statements: D1PreparedStatement[] = []
+  let statements: PreparedStatement[] = []
   for (const item of results) {
     const itemStatements = buildFtsQueueItemStatements(db, userId, item, notes.get(item.note_id))
     if (statements.length && statements.length + itemStatements.length > FTS_STATEMENT_BATCH) {
@@ -202,7 +202,7 @@ export async function drainFtsQueue(
   return results.length
 }
 
-export async function hasPendingFtsWork(db: D1Database, userId: string): Promise<boolean> {
+export async function hasPendingFtsWork(db: Database, userId: string): Promise<boolean> {
   const row = await db
     .prepare(`SELECT 1 AS pending FROM fts_index_queue WHERE user_id = ?1 LIMIT 1`)
     .bind(userId)
@@ -210,7 +210,7 @@ export async function hasPendingFtsWork(db: D1Database, userId: string): Promise
   return row?.pending === 1
 }
 
-export async function drainAllFtsQueues(db: D1Database, maxUsers = 20): Promise<number> {
+export async function drainAllFtsQueues(db: Database, maxUsers = 20): Promise<number> {
   const users = await selectQueueUsersRoundRobin(
     db,
     'fts_index_queue',

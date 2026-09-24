@@ -1039,7 +1039,6 @@ function demoMcpSettings(now = Date.now()): McpSettingsInfo {
     enabled: true,
     canManageGlobal: true,
     endpoint: 'https://your-inkstone.example/mcp',
-    oauth: true,
     preferences: {
       writeEnabled: true,
       trashEnabled: false,
@@ -1055,7 +1054,7 @@ function demoMcpSettings(now = Date.now()): McpSettingsInfo {
     aiSearch: {
       available: true,
       enabled: true,
-      model: '@cf/baai/bge-m3',
+      model: 'text-embedding-3-small',
       indexedCount: 24,
       pendingCount: 2,
       reason: null,
@@ -1082,8 +1081,7 @@ function siteInfo(state: DemoState) {
     name: 'Inkstone Demo',
     initialized: true,
     registrationOpen: state.registrationOpen,
-    r2Enabled: false,
-    kvEnabled: false,
+    minioEnabled: false,
     attachmentStorage: null,
     realtimeEnabled: false,
     version: APP_VERSION,

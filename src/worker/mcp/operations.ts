@@ -14,7 +14,7 @@ interface PendingOperation {
 }
 
 export async function runIdempotent<T>(options: {
-  db: D1Database
+  db: Database
   userId: string
   operationId: string
   tool: string
@@ -85,7 +85,7 @@ export async function runIdempotent<T>(options: {
 }
 
 export async function purgeExpiredMcpOperations(
-  db: D1Database,
+  db: Database,
   maxAgeMs = 7 * 24 * 60 * 60 * 1000,
   limit = 500,
 ): Promise<void> {
@@ -101,7 +101,7 @@ export async function purgeExpiredMcpOperations(
 }
 
 async function storeResponse<T>(
-  db: D1Database,
+  db: Database,
   userId: string,
   operationId: string,
   response: T,

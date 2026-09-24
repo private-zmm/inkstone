@@ -182,9 +182,7 @@ syncRoutes.get('/', requireAuth, async (c) => {
 
 
 syncRoutes.get('/ws', requireAuth, async (c) => {
-  if (!c.env.SYNC_HUB) {
-    throw new ApiError(503, 'storage_unavailable', 'The realtime channel is disabled; polling will be used')
-  }
+  if (!c.env.REALTIME) throw new ApiError(503, 'storage_unavailable', 'The realtime channel is disabled; polling will be used')
   const origin = c.req.header('Origin')
   if (origin && origin !== new URL(c.req.url).origin) {
     throw ApiError.forbidden('The realtime connection origin is not trusted')
@@ -193,18 +191,12 @@ syncRoutes.get('/ws', requireAuth, async (c) => {
     throw ApiError.badRequest('This endpoint accepts only WebSocket upgrade requests')
   }
 
-  const userId = c.get('userId')
-  const stub = c.env.SYNC_HUB.get(c.env.SYNC_HUB.idFromName(userId))
-  return stub.fetch(
-    new Request('https://sync-hub.internal/connect', {
-      headers: c.req.raw.headers,
-    }),
-  )
+  throw new ApiError(400, 'bad_request', 'Use the Node WebSocket listener for realtime sync')
 })
 
 
 async function fullSnapshot(
-  db: D1Database,
+  db: Database,
   userId: string,
   cursor: number,
   after: string,

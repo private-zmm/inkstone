@@ -268,7 +268,7 @@ export function LoginPage() {
       </div>
 
       <footer className="pointer-events-none mt-6 text-center text-[11px] tracking-[0.05em] text-[var(--text-quaternary)] md:mt-8">
-        {t("auth.self_hosted_on_cloudflare_workers_your_data_is_yours")}
+        {t("auth.self_hosted_local_your_data_is_yours")}
       </footer>
     </div>
   )

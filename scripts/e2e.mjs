@@ -183,8 +183,8 @@ console.log('[profile]')
   const uploaded = await owner.req('PUT', '/api/auth/profile', { avatarUrl: uploadedValue })
   const storedAvatarUrl = uploaded.data?.avatarUrl
   check(
-    'validated bitmap avatar stores only an object URL in D1',
-    uploaded.status === 200 && /^\/api\/avatars\/(?:r2|kv)\//.test(storedAvatarUrl ?? ''),
+    'validated bitmap avatar stores only an object URL in PostgreSQL',
+    uploaded.status === 200 && /^\/api\/avatars\/minio\//.test(storedAvatarUrl ?? ''),
   )
   const avatarImage = storedAvatarUrl ? await fetch(BASE + storedAvatarUrl) : null
   check(

@@ -336,7 +336,7 @@ foldersRoutes.delete('/:id', async (c) => {
   } else {
     const tree = subtreeCteWithRevision()
     const noteIds = `SELECT n.id FROM notes n WHERE n.user_id = ?2 AND n.folder_id IN (SELECT id FROM subtree)`
-    const statements: D1PreparedStatement[] = [
+    const statements: PreparedStatement[] = [
       c.env.DB.prepare(
         `${tree} INSERT INTO changes (user_id, entity, entity_id, op, at)
          SELECT ?2, 'folder', id, 'delete', ?4 FROM subtree`,
@@ -392,7 +392,7 @@ foldersRoutes.delete('/:id', async (c) => {
 })
 
 
-async function loadFolder(db: D1Database, userId: string, id: string): Promise<Folder> {
+async function loadFolder(db: Database, userId: string, id: string): Promise<Folder> {
   const row = await db
     .prepare(`SELECT ${FOLDER_SELECT} FROM folders f WHERE f.id = ?1 AND f.user_id = ?2`)
     .bind(id, userId)
@@ -417,7 +417,7 @@ interface FolderPromotionRow extends FolderOrderRow {
   parent_id: string | null
 }
 
-async function loadFolderGraph(db: D1Database, userId: string): Promise<FolderGraph> {
+async function loadFolderGraph(db: Database, userId: string): Promise<FolderGraph> {
   const { results } = await db
     .prepare(`SELECT id, parent_id, name FROM folders WHERE user_id = ?1 AND deleted_at IS NULL`)
     .bind(userId)
@@ -447,7 +447,7 @@ function availableFolderName(graph: FolderGraph, parentId: string | null, base: 
 }
 
 async function resolveFolderPosition(
-  db: D1Database,
+  db: Database,
   userId: string,
   id: string,
   currentParentId: string | null,
@@ -484,7 +484,7 @@ async function resolveFolderPosition(
 }
 
 async function loadSiblingOrder(
-  db: D1Database,
+  db: Database,
   userId: string,
   parentId: string | null,
 ): Promise<FolderOrderRow[]> {
@@ -505,13 +505,13 @@ function insertionPosition(previous: number | undefined, next: number | undefine
 }
 
 async function normalizeSiblingPositions(
-  db: D1Database,
+  db: Database,
   userId: string,
   siblings: FolderOrderRow[],
 ): Promise<void> {
   const MAX_BATCH_STATEMENTS = 80
   const now = Date.now()
-  const statements: D1PreparedStatement[] = []
+  const statements: PreparedStatement[] = []
   for (let index = 0; index < siblings.length; index++) {
     const sibling = siblings[index]!
     const position = (index + 1) * 1000
@@ -534,7 +534,7 @@ async function normalizeSiblingPositions(
 }
 
 export async function folderPromotionOrder(
-  db: D1Database,
+  db: Database,
   userId: string,
   folder: { id: string; parent_id: string | null; position: number },
 ): Promise<Array<{ id: string; position: number }>> {

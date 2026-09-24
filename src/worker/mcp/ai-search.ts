@@ -1,20 +1,16 @@
 /**
  * Private AI semantic search for the MCP module.
  *
- * Notes are embedded with Workers AI (`@cf/baai/bge-m3`, 1024 dims,
- * multilingual) and the vectors live in D1 — no public query endpoint, one
- * index per account. Content changes are queued and drained in the
- * background; when the AI binding is missing or the model call fails the
- * feature degrades to plain lexical search instead of failing (the old
- * behavior that surfaced as HTTP 503s).
+ * Notes are embedded with an OpenAI-compatible external API and the vectors
+ * live in the database, one index per account. Content changes are queued
+ * and drained in the background; provider failures fall back to lexical search.
  */
 import { toPlainText } from '@shared/markdown-utils'
 import { truncateText } from '@shared/text-utils'
 import { getMeta, selectQueueUsersRoundRobin, setMeta } from '../db/metadata'
 import type { Env } from '../env'
 
-export const AI_EMBEDDING_MODEL = '@cf/baai/bge-m3'
-const AI_EMBEDDING_DIMS = 1024
+export const DEFAULT_EMBEDDING_MODEL = 'text-embedding-3-small'
 const EMBED_TEXT_MAX_CHARS = 4_000
 const MAX_SEMANTIC_VECTORS = 8_000
 const SEMANTIC_TOP_K = 40
@@ -32,7 +28,7 @@ export interface AiSearchStatus {
   model: string
   indexedCount: number
   pendingCount: number
-  reason: 'no_ai_binding' | null
+  reason: 'not_configured' | null
 }
 
 export interface SemanticSearchHit {
@@ -71,7 +67,7 @@ export function isAiSearchAvailable(env: Env): boolean {
 }
 
 export async function getAiSearchStatus(
-  db: D1Database,
+  db: Database,
   env: Env,
   userId: string,
 ): Promise<AiSearchStatus> {
@@ -85,28 +81,26 @@ export async function getAiSearchStatus(
   return {
     available: isAiSearchAvailable(env),
     enabled,
-    model: AI_EMBEDDING_MODEL,
+    model: env.EMBEDDING_MODEL || DEFAULT_EMBEDDING_MODEL,
     indexedCount: indexed?.n ?? 0,
     pendingCount: pending?.n ?? 0,
-    reason: isAiSearchAvailable(env) ? null : 'no_ai_binding',
+    reason: isAiSearchAvailable(env) ? null : 'not_configured',
   }
 }
 
 export async function setAiSearchEnabled(
-  db: D1Database,
+  db: Database,
   userId: string,
   enabled: boolean,
 ): Promise<void> {
   await setMeta(db, aiSearchPrefKey(userId), enabled ? '1' : '0')
 }
 
-export async function isAiSearchEnabled(db: D1Database, userId: string): Promise<boolean> {
+export async function isAiSearchEnabled(db: Database, userId: string): Promise<boolean> {
   return await getMeta(db, aiSearchPrefKey(userId)) === '1'
 }
 
-// Stored in app_meta instead of a column on mcp_preferences: D1 does not
-// reliably support ALTER TABLE ADD COLUMN with constraints, and app_meta
-// exists on every database without any migration.
+// Stored in app_meta for compatibility with existing preference rows.
 function aiSearchPrefKey(userId: string): string {
   return `ai-search-enabled:${userId}`
 }
@@ -118,7 +112,7 @@ function aiSearchPrefKey(userId: string): string {
  * disabled, except deletions which always clean up stale vectors.
  */
 export async function enqueueNoteIndex(
-  db: D1Database,
+  db: Database,
   userId: string,
   noteId: string,
   kind: AiIndexKind,
@@ -128,12 +122,12 @@ export async function enqueueNoteIndex(
 }
 
 export function noteIndexQueueStatement(
-  db: D1Database,
+  db: Database,
   userId: string,
   noteId: string,
   kind: AiIndexKind,
   now = Date.now(),
-): D1PreparedStatement {
+): PreparedStatement {
   const guard = kind === 'embed'
     ? ` WHERE EXISTS (SELECT 1 FROM app_meta WHERE key = ?5 AND value = '1')`
     : ` WHERE ${aiDeleteNeededSql('?1', '?2')}`
@@ -156,7 +150,7 @@ export function aiDeleteNeededSql(userId: string, noteId: string): string {
 }
 
 export async function enqueueAllNotesForIndex(
-  db: D1Database,
+  db: Database,
   userId: string,
   now = Date.now(),
 ): Promise<number> {
@@ -189,7 +183,7 @@ export async function enqueueAllNotesForIndex(
   return enqueued
 }
 
-export async function clearAiIndex(db: D1Database, userId: string): Promise<number> {
+export async function clearAiIndex(db: Database, userId: string): Promise<number> {
   const row = await db.prepare(
     `SELECT COUNT(*) AS n FROM ai_note_embeddings WHERE user_id = ?1`,
   ).bind(userId).first<{ n: number }>()
@@ -203,7 +197,7 @@ export async function clearAiIndex(db: D1Database, userId: string): Promise<numb
 /**
  * Processes queued embedding jobs. Called from the hourly cron with a large
  * budget and from write paths (via waitUntil) with a small one. Items are
- * processed sequentially so Workers AI rate limits are respected; a failing
+ * processed sequentially so provider rate limits are respected; a failing
  * item stops the batch and is retried on the next run.
  */
 export async function drainAiIndexQueue(env: Env, max: number): Promise<{ processed: number }> {
@@ -286,7 +280,8 @@ async function processQueueItem(env: Env, userId: string, item: QueueRow): Promi
     return
   }
   const text = `${note.title}\n${note.content}`.slice(0, EMBED_TEXT_MAX_CHARS)
-  const vector = await embedText(ai, text)
+  const model = env.EMBEDDING_MODEL || DEFAULT_EMBEDDING_MODEL
+  const vector = await embedText(ai, text, model)
   await db.batch([
     db.prepare(
       `INSERT INTO ai_note_embeddings (user_id, note_id, model, vector, indexed_at)
@@ -296,7 +291,7 @@ async function processQueueItem(env: Env, userId: string, item: QueueRow): Promi
     ).bind(
       userId,
       item.note_id,
-      AI_EMBEDDING_MODEL,
+      model,
       encodeVector(vector),
       Date.now(),
       userId,
@@ -318,13 +313,13 @@ async function processQueueItem(env: Env, userId: string, item: QueueRow): Promi
  */
 export async function searchSemanticNotes(
   env: Env,
-  db: D1Database,
+  db: Database,
   userId: string,
   query: string,
   filters: SemanticFilters,
 ): Promise<SemanticSearchHit[] | null> {
   if (!env.AI || !await isAiSearchEnabled(db, userId)) return null
-  const queryVector = await embedText(env.AI, query)
+  const queryVector = await embedText(env.AI, query, env.EMBEDDING_MODEL || DEFAULT_EMBEDDING_MODEL)
   const { binds, where } = semanticWhere(userId, filters)
   binds.push(MAX_SEMANTIC_VECTORS)
   const { results } = await db.prepare(
@@ -394,9 +389,13 @@ export function fuseByRrf<T extends { id: string }>(
   )
 }
 
-/** Calls the Workers AI embedding model and returns a Float32Array. */
-export async function embedText(ai: NonNullable<Env['AI']>, text: string): Promise<Float32Array> {
-  const result = await ai.run(AI_EMBEDDING_MODEL, { text: [text] })
+/** Calls the configured embedding provider and returns a Float32Array. */
+export async function embedText(
+  ai: NonNullable<Env['AI']>,
+  text: string,
+  model = DEFAULT_EMBEDDING_MODEL,
+): Promise<Float32Array> {
+  const result = await ai.run(model, { text: [text] })
   return extractEmbedding(result)
 }
 
@@ -419,9 +418,15 @@ export function encodeVector(vector: Float32Array): ArrayBuffer {
   return new Float32Array(vector).buffer
 }
 
-export function decodeVector(buffer: ArrayBuffer): Float32Array {
-  const view = new Float32Array(buffer)
-  return view.length === AI_EMBEDDING_DIMS ? view : view.slice(0, AI_EMBEDDING_DIMS)
+export function decodeVector(buffer: ArrayBuffer | ArrayBufferView): Float32Array {
+  const bytes = buffer instanceof ArrayBuffer
+    ? new Uint8Array(buffer)
+    : new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength)
+  const aligned = bytes.byteOffset === 0 && bytes.byteLength === bytes.buffer.byteLength
+    ? bytes.buffer
+    : bytes.slice().buffer
+  const view = new Float32Array(aligned)
+  return view
 }
 
 export function cosineSimilarity(a: Float32Array, b: Float32Array): number {

@@ -18,9 +18,9 @@ npm ci
 npm run dev
 ```
 
-The local application is available at `http://localhost:7712`. Wrangler stores local D1, R2, and Durable Object state under `.wrangler/state/`.
+The local application is available at `http://localhost:3000` after starting the Node server. PostgreSQL, Redis, and MinIO state is stored in the configured Docker volumes.
 
-`npm run dev` omits the Workers AI binding so startup does not wait for a remote AI connection. The local Worker and MCP remain available, with keyword search instead of AI semantic search. Use `npm run dev:ai` to test real Workers AI (requires Cloudflare authentication and network access). Production builds keep the AI binding from `wrangler.toml`.
+Set `EMBEDDING_BASE_URL`, `EMBEDDING_API_KEY`, and `EMBEDDING_MODEL` to enable semantic search through an OpenAI-compatible embedding service. Without them, keyword search remains available.
 
 ## Required checks
 

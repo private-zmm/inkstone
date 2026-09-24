@@ -3,15 +3,12 @@ import { ApiError } from './errors'
 import { isValidId } from './id'
 
 
-const VAULT_NAME = 'primary'
-const VAULT_ORIGIN = 'https://credential-vault.internal'
-
 export class CryptoUnavailableError extends ApiError {
   constructor() {
     super(
       503,
       'server_misconfigured',
-      'The server is missing the CREDENTIAL_VAULT Durable Object binding and cannot store sensitive credentials safely',
+      'The server is missing credential encryption configuration',
     )
     this.name = 'CryptoUnavailableError'
   }
@@ -48,47 +45,57 @@ export async function decryptTotpSecret(
 }
 
 async function encryptCredential(env: Env, scope: string, value: unknown): Promise<string> {
-  const response = await vaultRequest(env, '/encrypt', { scope, value })
-  if (!response.ok) throw new CryptoUnavailableError()
-  const body: unknown = await response.json().catch(() => null)
-  const ciphertext = readStringField(body, 'ciphertext')
-  if (!ciphertext || ciphertext.length > 24 * 1024) throw new CryptoUnavailableError()
-  return ciphertext
+  if (!env.ENCRYPTION_KEY) throw new CryptoUnavailableError()
+  return encryptLocally(env.ENCRYPTION_KEY, scope, value)
 }
 
 async function decryptCredential(env: Env, scope: string, stored: string): Promise<unknown> {
+  if (!env.ENCRYPTION_KEY) throw new CryptoUnavailableError()
+  return decryptLocally(env.ENCRYPTION_KEY, scope, stored)
+}
+
+async function encryptLocally(keyMaterial: string, scope: string, value: unknown): Promise<string> {
+  const key = await deriveLocalKey(keyMaterial, scope)
+  const iv = crypto.getRandomValues(new Uint8Array(12))
+  const plaintext = new TextEncoder().encode(JSON.stringify(value))
+  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext)
+  return `v1.${encodeBase64Url(iv)}.${encodeBase64Url(new Uint8Array(ciphertext))}`
+}
+
+async function decryptLocally(keyMaterial: string, scope: string, stored: string): Promise<unknown> {
+  const [version, encodedIv, encodedCiphertext] = stored.split('.')
+  if (version !== 'v1' || !encodedIv || !encodedCiphertext) return null
   try {
-    const response = await vaultRequest(env, '/decrypt', { scope, ciphertext: stored })
-    if (response.status === 422) return null
-    if (!response.ok) throw new CryptoUnavailableError()
-    const body: unknown = await response.json().catch(() => null)
-    if (!body || typeof body !== 'object' || Array.isArray(body) || !('value' in body)) return null
-    return (body as { value: unknown }).value
-  } catch (error) {
-    if (error instanceof CryptoUnavailableError) throw error
-    throw new CryptoUnavailableError()
+    const key = await deriveLocalKey(keyMaterial, scope)
+    const plaintext = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: decodeBase64Url(encodedIv) as unknown as ArrayBuffer },
+      key,
+      decodeBase64Url(encodedCiphertext) as unknown as ArrayBuffer,
+    )
+    return JSON.parse(new TextDecoder().decode(plaintext)) as unknown
+  } catch {
+    return null
   }
 }
 
-async function vaultRequest(env: Env, path: '/encrypt' | '/decrypt', body: unknown): Promise<Response> {
-  if (!env.CREDENTIAL_VAULT) throw new CryptoUnavailableError()
-  try {
-    const id = env.CREDENTIAL_VAULT.idFromName(VAULT_NAME)
-    return await env.CREDENTIAL_VAULT.get(id).fetch(`${VAULT_ORIGIN}${path}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-  } catch (error) {
-    if (error instanceof CryptoUnavailableError) throw error
-    throw new CryptoUnavailableError()
-  }
+async function deriveLocalKey(keyMaterial: string, scope: string): Promise<CryptoKey> {
+  const material = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(`${keyMaterial}\u0000${scope}`),
+  )
+  return crypto.subtle.importKey('raw', material, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt'])
 }
 
-function readStringField(value: unknown, key: string): string | null {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
-  const field = (value as Record<string, unknown>)[key]
-  return typeof field === 'string' ? field : null
+function encodeBase64Url(value: Uint8Array): string {
+  let binary = ''
+  for (const byte of value) binary += String.fromCharCode(byte)
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
+}
+
+function decodeBase64Url(value: string): Uint8Array {
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - value.length % 4) % 4)
+  const binary = atob(normalized)
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0))
 }
 
 function isBackupCredentialRecord(value: unknown): value is Record<string, string> {

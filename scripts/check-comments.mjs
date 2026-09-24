@@ -3,10 +3,6 @@ import path from 'node:path'
 import ts from 'typescript'
 
 const allowed = new Map([
-  ["scripts/check-i18n.mjs", [
-    "// The OAuth consent page is a self-contained HTML document with its own",
-    "// language switch (cookie-based); it does not use the React i18n layer.",
-  ]],
   ["src/client/features/graph/GraphPanel.tsx", [
     "// Private browsing or a locked-down browser can reject local preferences.",
   ]],
@@ -15,10 +11,12 @@ const allowed = new Map([
     "// enforces the same minimum); short codes are trivially brute-forced.",
   ]],
   ["src/client/lib/i18n.ts", [
-    "/** Provides typed runtime localization with complete English and Simplified Chinese resources. */",
+    "/** Provides typed runtime localization with on-demand locale loading. */",
+    "// Preload the other locale in background for instant switching, but don't block init",
   ]],
   ["src/client/lib/markdown/renderer.ts", [
     "/** Builds the sanitized Markdown rendering pipeline and its Inkstone-specific syntax extensions. */",
+    "/** Parse once with the full document environment so reference links retain their targets. */",
   ]],
   ["src/client/lib/sync.ts", [
     "/**\n   * Applies live setting changes (realtime toggle, poll interval) without\n   * tearing down the engine, its WebSocket, or its leadership claim.\n   */",
@@ -42,66 +40,66 @@ const allowed = new Map([
     "// md-example fences are rendered as live markdown by the client renderer,",
     "// so references inside them count even though stripCodeRegions discards",
     "// them as ordinary code regions.",
-    "// A closing fence may only be followed by spaces or tabs.",
+  ]],
+  ["src/client/editor/CodeEditor.tsx", [
+    "// Preserve undo history across mode changes once editing has started.",
+  ]],
+  ["src/client/editor/codeLanguages.ts", [
+    "// Highlighting removed: no code languages are loaded.",
+    "// Kept as empty array so the editor behaves as plain Markdown without syntax colors.",
+  ]],
+  ["src/client/editor/live-preview.ts", [
+    "// Preserve the source line under the pointer, including rows inside tables/lists.",
+    "/** Decorations change presentation only; all editing, undo, search and saving use Markdown. */",
+    "// Keep typing synchronous and cheap. Reparse after a short idle window; never",
+    "// display stale HTML for a block whose source was touched in the meantime.",
+  ]],
+  ["src/client/store/notes.ts", [
+    "// Keep the current document for fast reads; only slow reads need a loading page.",
   ]],
   ["src/worker/backup/snapshot.ts", [
     "/** Produces restorable JSON, readable Markdown, and attachment files for every backup target. */",
   ]],
   ["src/worker/db/schema.ts", [
-    "/** Defines the idempotent final D1 schema initialized by every Worker isolate. */",
+    "/** Defines the idempotent PostgreSQL schema initialized by the local runtime. */",
     "// Explicit whitelist (not a regex over SCHEMA_STATEMENTS) so later",
     "// additions like mcp_api_keys can never be picked up accidentally.",
-    "// Only CREATE TABLE / INDEX statements: D1 does not reliably support",
+    "// Keep initialization idempotent so the local runtime can restart safely.",
     "// ALTER TABLE ADD COLUMN with constraints, so the AI search preference",
     "// lives in app_meta (key `ai-search-enabled:<userId>`) instead of a",
     "// new column on the pre-existing mcp_preferences table.",
     "// Existing installations must converge additively. CREATE IF NOT EXISTS",
     "// never rewrites user data; running table creation before indexes also",
     "// lets a partially initialized database recover missing feature tables.",
+    "// Keep the existing indexed text and rowids. The batch either replaces the",
+    "// complete index or rolls back, including when an old installation retries.",
+  ]],
+  ["src/worker/db/postgres.ts", [
+    "/**\n * Keeps the existing query calls usable while the SQL runs on PostgreSQL.\n * PostgreSQL. New code should use PostgreSQL syntax directly.\n */",
+    "// SQLite's NOCASE collation is attached to both comparisons and ordering.",
+    "// Keep the same behavior with PostgreSQL expressions and functional indexes.",
+    "// SQLite exposes an implicit rowid on ordinary tables. PostgreSQL's ctid",
+    "// provides the same short-lived row locator for bounded cleanup queries.",
   ]],
   ["src/worker/db/writes.ts", [
     "/** Keeps tags, backlinks, full-text indexes, and change records consistent with note writes. */",
   ]],
-  ["src/worker/env.ts", [
-    "/** Workers AI binding for semantic search; optional so AI search degrades gracefully. */",
-  ]],
-  ["src/worker/index.ts", [
-    "// Codex CLI drops the `iss` callback parameter while its rmcp",
-    "// dependency enforces it whenever the authorization server advertises",
-    "// `authorization_response_iss_parameter_supported` (openai/codex#31573), so",
-    "// login fails even though the parameter is on the wire. Serve the metadata",
-    "// without that flag to keep codex compatible; the standard RFC 9207 `iss`",
-    "// parameter is still appended to callbacks for conforming clients.",
-  ]],
-  ["src/worker/lib/request.ts", [
-    "// CF-Connecting-IP is injected by the Cloudflare edge and cannot be",
-    "// spoofed there. On any other runtime the header is client-controlled,",
-    "// so ignore it rather than trusting it for throttling.",
-  ]],
+  ["src/worker/lib/request.ts", []],
   ["src/worker/mcp/ai-search.ts", [
-    "/**\n * Private AI semantic search for the MCP module.\n *\n * Notes are embedded with Workers AI (`@cf/baai/bge-m3`, 1024 dims,\n * multilingual) and the vectors live in D1 — no public query endpoint, one\n * index per account. Content changes are queued and drained in the\n * background; when the AI binding is missing or the model call fails the\n * feature degrades to plain lexical search instead of failing (the old\n * behavior that surfaced as HTTP 503s).\n */",
-    "// Stored in app_meta instead of a column on mcp_preferences: D1 does not",
-    "// reliably support ALTER TABLE ADD COLUMN with constraints, and app_meta",
-    "// exists on every database without any migration.",
+    "/**\n * Private AI semantic search for the MCP module.\n *\n * Notes are embedded with an OpenAI-compatible external API and the vectors\n * live in the database, one index per account. Content changes are queued\n * and drained in the background; provider failures fall back to lexical search.\n */",
+    "// Stored in app_meta for compatibility with existing preference rows.",
     "/**\n * Queues a note for embedding (or vector deletion). The single row per note\n * uses last-write-wins semantics: a delete supersedes a pending embed and\n * vice versa. Queuing is skipped entirely while the account has AI search\n * disabled, except deletions which always clean up stale vectors.\n */",
-    "/**\n * Processes queued embedding jobs. Called from the hourly cron with a large\n * budget and from write paths (via waitUntil) with a small one. Items are\n * processed sequentially so Workers AI rate limits are respected; a failing\n * item stops the batch and is retried on the next run.\n */",
+    "/**\n * Processes queued embedding jobs. Called from the hourly cron with a large\n * budget and from write paths (via waitUntil) with a small one. Items are\n * processed sequentially so provider rate limits are respected; a failing\n * item stops the batch and is retried on the next run.\n */",
     "// The account turned AI search off; its queue would otherwise grow forever.",
     "/**\n * Semantic retrieval over the account's embedding index. Returns null when\n * AI is unavailable or the query embedding fails; the caller degrades to\n * lexical search.\n */",
     "/**\n * Reciprocal-rank fusion: merges two ranked lists into one by rank, so a\n * note that ranks well in both lexical and semantic search surfaces above\n * one that only appears in a single index.\n */",
-    "/** Calls the Workers AI embedding model and returns a Float32Array. */",
+    "/** Calls the configured embedding provider and returns a Float32Array. */",
     "/** Handles both the `{ data: [{ embedding }] }` and `{ shape, data }` shapes. */",
   ]],
   ["src/worker/mcp/api-keys.ts", [
-    "/**\n * Static API keys for MCP access.\n *\n * Small or generic MCP clients (scripts, SDKs, unnamed agents) cannot run the\n * OAuth 2.1 dance, so they authenticate with a plain `Authorization: Bearer\n * <key>` header — the universal HTTP standard. The OAuth provider resolves\n * these tokens through its official `resolveExternalToken` hook; the key is\n * never stored or returned again, only its SHA-256 hash.\n */",
+    "/**\n * Static API keys for MCP access.\n *\n * Clients authenticate with a plain `Authorization: Bearer <key>` header.\n * Keys are stored only as SHA-256 hashes and can be revoked in settings.\n */",
     "// 32 random bytes encoded as unpadded base64url is exactly 43 characters.",
-    "/**\n * Resolves a bearer token to an account. Returns null for unknown, revoked,\n * or malformed keys so the OAuth provider can answer with 401 invalid_token.\n */",
-  ]],
-  ["src/worker/mcp/oauth.ts", [
-    "// Static API keys let small or generic MCP clients authenticate with a",
-    "// plain `Authorization: Bearer ink_...` header instead of running the",
-    "// full OAuth 2.1 dance. Keys are hashed and revocable.",
-    "// This path runs before the API handler, so ensure the schema exists",
-    "// (cheap after the first request thanks to the initialization cache).",
+    "/**\n * Resolves a bearer token to an account. Returns null for unknown, revoked,\n * or malformed keys so the local MCP handler can answer with HTTP 401.\n */",
   ]],
   ["src/worker/mcp/operations.ts", [
     "// The mutation itself failed before committing; remove the pending row",
@@ -132,13 +130,16 @@ const allowed = new Map([
     "// Never move the client's cursor backwards, even if it reported a",
     "// seq ahead of the server (e.g. data was trimmed).",
   ]],
+  ["vite.config.ts", [
+    "// Keep optional preview renderers and their language modules behind dynamic-import boundaries.",
+  ]],
 ])
 const found = new Map()
 const failures = []
 const roots = ['src', 'scripts', 'tests']
 const files = [
   ...roots.filter((root) => fs.existsSync(root)).flatMap((root) => [...walk(path.resolve(root))]),
-  ...['vite.config.ts', 'vitest.config.ts', 'index.html', 'wrangler.toml'].map((file) => path.resolve(file)),
+  ...['vite.config.ts', 'vitest.config.ts', 'index.html'].map((file) => path.resolve(file)),
 ]
 
 for (const file of files) {

@@ -158,7 +158,7 @@ function isLexicalHit(hit: LexicalHit | SemanticHit): hit is LexicalHit {
   return 'snippet' in hit
 }
 
-export async function loadMcpNote(db: D1Database, userId: string, id: string): Promise<Note> {
+export async function loadMcpNote(db: Database, userId: string, id: string): Promise<Note> {
   const noteId = normalizeNoteId(id)
   const row = await db.prepare(
     `SELECT ${NOTE_COLUMNS_FULL} FROM notes n
@@ -169,7 +169,7 @@ export async function loadMcpNote(db: D1Database, userId: string, id: string): P
 }
 
 export async function fetchMcpNote(
-  db: D1Database,
+  db: Database,
   userId: string,
   origin: string,
   id: string,
@@ -205,7 +205,7 @@ export async function fetchMcpNote(
 }
 
 export async function readMcpNote(
-  db: D1Database,
+  db: Database,
   userId: string,
   origin: string,
   input: {
@@ -262,7 +262,7 @@ export async function readMcpNote(
 }
 
 export async function getMcpNoteContext(
-  db: D1Database,
+  db: Database,
   userId: string,
   origin: string,
   noteId: string,
@@ -325,7 +325,7 @@ export async function getMcpNoteContext(
 }
 
 export async function listMcpNotes(
-  db: D1Database,
+  db: Database,
   userId: string,
   origin: string,
   input: {
@@ -379,7 +379,7 @@ export async function listMcpNotes(
   }
 }
 
-export async function listMcpFolders(db: D1Database, userId: string): Promise<Record<string, unknown>> {
+export async function listMcpFolders(db: Database, userId: string): Promise<Record<string, unknown>> {
   const { results } = await db.prepare(
     `SELECT f.id, f.parent_id, f.name, f.position,
             (SELECT COUNT(*) FROM notes n
@@ -416,7 +416,7 @@ export async function listMcpFolders(db: D1Database, userId: string): Promise<Re
   }
 }
 
-export async function listMcpTags(db: D1Database, userId: string, limit = 100): Promise<Record<string, unknown>> {
+export async function listMcpTags(db: Database, userId: string, limit = 100): Promise<Record<string, unknown>> {
   const { results } = await db.prepare(
     `SELECT t.id, t.name, t.color, COUNT(n.id) AS note_count
        FROM tags t LEFT JOIN note_tags nt ON nt.tag_id = t.id

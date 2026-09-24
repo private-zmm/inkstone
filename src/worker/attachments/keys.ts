@@ -7,7 +7,7 @@ export interface StoredAttachmentKey {
   filename: string
 }
 
-export type AttachmentObjectStorage = 'r2' | 'kv'
+export type AttachmentObjectStorage = 'minio'
 
 export function attachmentObjectKey(row: StoredAttachmentKey): string {
   return `${row.user_id}/${row.id}.${extensionFor(row.mime, row.filename)}`
@@ -21,7 +21,6 @@ export function parseAttachmentCleanupTarget(value: string): {
   storage: AttachmentObjectStorage
   key: string
 } | null {
-  if (value.startsWith('kv:') && value.length > 3) return { storage: 'kv', key: value.slice(3) }
-  if (value.startsWith('r2:') && value.length > 3) return { storage: 'r2', key: value.slice(3) }
+  if (value.startsWith('minio:') && value.length > 6) return { storage: 'minio', key: value.slice(6) }
   return null
 }

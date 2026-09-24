@@ -46,7 +46,7 @@ export async function persistUploadedAvatar(
     throw new ApiError(
       503,
       'storage_unavailable',
-      'Avatar storage is not configured. Bind R2 or Workers KV before uploading an image.',
+      'MinIO avatar storage is not configured.',
     )
   }
 
