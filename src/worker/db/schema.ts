@@ -725,6 +725,8 @@ function toPostgresSchemaStatement(statement: string): string {
     .replace(/INTEGER\s+PRIMARY\s+KEY\s+AUTOINCREMENT/gi, 'BIGSERIAL PRIMARY KEY')
     .replace(/\bBLOB\b/gi, 'BYTEA')
     .replace(/\b(at|[A-Za-z_]+_(?:at|until))\s+INTEGER\b/gi, '$1 BIGINT')
+    .replace(/\bCREATE\s+INDEX\s+(?!IF\s+NOT\s+EXISTS\b)/gi, 'CREATE INDEX IF NOT EXISTS ')
+    .replace(/\bALTER\s+TABLE\s+([A-Za-z_][\w.]*)\s+ADD\s+COLUMN\s+(?!IF\s+NOT\s+EXISTS\b)/gi, 'ALTER TABLE $1 ADD COLUMN IF NOT EXISTS ')
     .replace(/([A-Za-z_][\w.]*)\s+COLLATE\s+NOCASE\b/gi, 'LOWER($1)')
     .replace(/\bCOLLATE\s+NOCASE\b/gi, '')
     .replace(/\bIFNULL\s*\(/gi, 'COALESCE(')

@@ -6,6 +6,7 @@ services:
       - .env
     environment:
       CLIENT_ASSETS_DIR: /app/dist/client
+      PORT: 3000
     depends_on:
       postgres:
         condition: service_healthy
@@ -14,7 +15,7 @@ services:
       minio:
         condition: service_healthy
     ports:
-      - "3000:3000"
+      - "${APP_PORT:-3000}:3000"
 
   scheduler:
     build: .
