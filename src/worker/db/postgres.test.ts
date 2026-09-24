@@ -48,6 +48,24 @@ describe('normalizePostgresSql', () => {
     )
   })
 
+  it('translates SQLite unlimited pagination to PostgreSQL LIMIT ALL', () => {
+    expect(normalizePostgresSql(
+      'SELECT * FROM notes LIMIT -1 OFFSET ?8',
+    )).toBe(
+      'SELECT * FROM notes LIMIT ALL OFFSET $8',
+    )
+    expect(normalizePostgresSql(
+      'SELECT * FROM notes limit   -1   offset ?2',
+    )).toBe(
+      'SELECT * FROM notes LIMIT ALL OFFSET $2',
+    )
+    expect(normalizePostgresSql(
+      'SELECT * FROM notes LIMIT -1',
+    )).toBe(
+      'SELECT * FROM notes LIMIT ALL',
+    )
+  })
+
   it('casts millisecond timestamps in nested SQLite MAX calls', () => {
     expect(normalizePostgresSql(
       'SELECT MAX(?3, COALESCE((SELECT created_at + 1 FROM ai_index_queue), ?3))',

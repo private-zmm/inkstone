@@ -161,6 +161,11 @@ export function normalizePostgresSql(source: string): string {
   sql = sql.replace(/\bIFNULL\s*\(/gi, 'COALESCE(')
   sql = sql.replace(/\bGROUP_CONCAT\(\s*([A-Za-z_][\w.]*)\s*,\s*char\(1\)\s*\)/gi, 'STRING_AGG($1, chr(1))')
   sql = sql.replace(/\bLIKE\b/gi, 'ILIKE')
+  // SQLite uses LIMIT -1 to mean "no limit". PostgreSQL rejects negative
+  // LIMIT values, so use its explicit LIMIT ALL form while preserving the
+  // offset parameter.
+  sql = sql.replace(/\bLIMIT\s+-1\s+OFFSET\s+(\$\d+)/gi, 'LIMIT ALL OFFSET $1')
+  sql = sql.replace(/\bLIMIT\s+-1\b/gi, 'LIMIT ALL')
   // SQLite exposes an implicit rowid on ordinary tables. PostgreSQL's ctid
   // provides the same short-lived row locator for bounded cleanup queries.
   sql = sql.replace(/\browid\b/gi, 'ctid')
