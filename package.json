@@ -48,6 +48,7 @@
     "@hono/node-server": "^1.19.0",
     "@modelcontextprotocol/server": "2.0.0",
     "@types/ws": "^8.18.1",
+    "aws4fetch": "^1.0.20",
     "client-zip": "2.5.0",
     "clsx": "^2.1.1",
     "dompurify": "^3.4.13",
